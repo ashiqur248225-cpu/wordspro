@@ -17,6 +17,9 @@ interface WordProDB extends DBSchema {
 let dbPromise: Promise<IDBPDatabase<WordProDB>> | null = null;
 
 const getDbInstance = () => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
   if (!dbPromise) {
     dbPromise = openDB<WordProDB>('WordProDB', 1, {
       upgrade(db) {
@@ -48,6 +51,7 @@ export const getDB = async () => {
 // Word Functions
 export async function addWord(word: Omit<Word, 'id' | 'createdAt' | 'updatedAt'>) {
     const db = await getDbInstance();
+    if (!db) return;
     const now = new Date().toISOString();
     return db.add('words', { 
         ...word, 
@@ -58,27 +62,32 @@ export async function addWord(word: Omit<Word, 'id' | 'createdAt' | 'updatedAt'>
 
 export async function getAllWords() {
     const db = await getDbInstance();
+    if (!db) return [];
     return db.getAll('words');
 }
 
 export async function getWord(id: number) {
     const db = await getDbInstance();
+    if (!db) return undefined;
     return db.get('words', id);
 }
 
 export async function updateWord(word: Word) {
     const db = await getDbInstance();
+    if (!db) return;
     const now = new Date().toISOString();
     return db.put('words', { ...word, updatedAt: now });
 }
 
 export async function deleteWord(id: number) {
     const db = await getDbInstance();
+    if (!db) return;
     return db.delete('words', id);
 }
 
-export async function getWordsByDifficulty(difficulty: ('Hard' | 'Medium')[]) {
+export async function getWordsByDifficulty(difficulty: ('Easy' | 'Medium' | 'Hard' | 'New')[]) {
     const db = await getDbInstance();
+    if (!db) return [];
     const tx = db.transaction('words', 'readonly');
     const index = tx.store.index('difficulty');
     const promises = difficulty.map(level => index.getAll(level));
@@ -89,6 +98,7 @@ export async function getWordsByDifficulty(difficulty: ('Hard' | 'Medium')[]) {
 
 export async function getWordsForQuiz(count: number) {
     const db = await getDbInstance();
+    if (!db) return [];
     let words = await getWordsByDifficulty(['Hard', 'Medium']);
     if (words.length < count) {
         const allWords = await getAllWords();
@@ -102,6 +112,7 @@ export async function getWordsForQuiz(count: number) {
 // Note Functions
 export async function addNote(note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>) {
     const db = await getDbInstance();
+    if (!db) return;
     const now = new Date().toISOString();
     return db.add('notes', { 
         ...note, 
@@ -112,16 +123,19 @@ export async function addNote(note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>
 
 export async function getAllNotes() {
     const db = await getDbInstance();
+    if (!db) return [];
     return db.getAll('notes');
 }
 
 export async function updateNote(note: Note) {
     const db = await getDbInstance();
+    if (!db) return;
     const now = new Date().toISOString();
     return db.put('notes', { ...note, updatedAt: now });
 }
 
 export async function deleteNote(id: number) {
     const db = await getDbInstance();
+    if (!db) return;
     return db.delete('notes', id);
 }

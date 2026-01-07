@@ -11,6 +11,7 @@ import {
 import { PageTemplate } from '@/components/page-template';
 import { StatsCards } from './stats-cards';
 import { ProgressChart } from './progress-chart';
+import { WordReviewCard } from './word-review-card';
 
 export default function Dashboard() {
   return (
@@ -21,7 +22,12 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCards />
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <WordReviewCard difficulty="Easy" />
+          <WordReviewCard difficulty="Medium" />
+          <WordReviewCard difficulty="Hard" />
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-4">
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>Word Mastery</CardTitle>
