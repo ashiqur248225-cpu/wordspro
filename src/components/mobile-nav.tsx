@@ -1,17 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { Menu, LayoutDashboard, BookText, BrainCircuit, Notebook } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Logo } from '@/components/icons';
+import { navItems } from '@/lib/nav-items';
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/words', label: 'Words', icon: BookText },
-  { href: '/learn', label: 'Exam', icon: BrainCircuit },
-  { href: '/notes', label: 'Notes', icon: Notebook },
-];
 
 export function MobileNav() {
   return (

@@ -4,19 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons';
-import {
-  LayoutDashboard,
-  BookText,
-  BrainCircuit,
-  Notebook,
-} from 'lucide-react';
-
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/words', label: 'Words', icon: BookText },
-  { href: '/learn', label: 'Exam', icon: BrainCircuit },
-  { href: '/notes', label: 'Notes', icon: Notebook },
-];
+import { navItems } from '@/lib/nav-items';
 
 export function MainNav() {
   const pathname = usePathname();
