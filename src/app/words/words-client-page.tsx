@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { PlusCircle, Upload, X } from 'lucide-react';
+import { PlusCircle, Upload, X, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageTemplate } from '@/components/page-template';
 import {
@@ -193,7 +193,7 @@ function WordsClientContent() {
 
   const onSubmit = async (data: WordFormData) => {
     try {
-        const payload: Omit<Word, 'id' | 'createdAt' | 'updatedAt' | 'difficulty'> & { difficulty?: WordDifficulty } = {
+        const payload: Omit<Word, 'id' | 'createdAt' | 'updatedAt' | 'difficulty' | 'learned' | 'wrong_count' | 'correct_count' | 'total_exams'> = {
           ...data,
           partOfSpeech: data.partOfSpeech,
           syllables: stringToArray(data.syllables),
@@ -208,7 +208,10 @@ function WordsClientContent() {
         } else {
             const newWordData: Omit<Word, 'id' | 'createdAt' | 'updatedAt'> = {
                 ...payload,
-                difficulty: 'New'
+                difficulty: 'New',
+                wrong_count: { spelling: 0, meaning: 0 },
+                correct_count: 0,
+                total_exams: 0,
             };
             await addWord(newWordData);
             toast({ title: 'Word added successfully' });
@@ -240,7 +243,18 @@ function WordsClientContent() {
   
   const handleAddNew = () => {
     setEditingWord(null);
-    form.reset();
+    form.reset({
+        word: '',
+        meaning: '',
+        partOfSpeech: 'noun',
+        meaning_explanation: '',
+        syllables: '',
+        usageDistinction: '',
+        synonyms: '',
+        antonyms: '',
+        exampleSentences: '',
+        verb_forms: null,
+    });
     setIsFormOpen(true);
   };
 
@@ -326,7 +340,8 @@ function WordsClientContent() {
   const pageTitle = initialDifficultyFilter ? `${initialDifficultyFilter} Words` : 'Vocabulary';
   const pageDescription = initialDifficultyFilter ? `A list of all words marked as ${initialDifficultyFilter.toLowerCase()}.` : 'Manage your collection of words.';
 
-  const hasActiveFilters = difficultyFilters.size > 0 || posFilters.size > 0 || searchTerm !== '';
+  const activeFilterCount = difficultyFilters.size + posFilters.size;
+  const hasActiveFilters = activeFilterCount > 0 || searchTerm !== '';
 
   const isVerb = form.watch('partOfSpeech') === 'verb';
 
@@ -445,11 +460,13 @@ function WordsClientContent() {
             />
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="outline">
-                        Difficulty {difficultyFilters.size > 0 && `(${difficultyFilters.size})`}
+                    <Button variant="outline" size="sm" className="h-9 gap-1">
+                        <Filter className="h-3.5 w-3.5" />
+                        <span className="sr-only sm:not-sr-only">Filter</span>
+                         {activeFilterCount > 0 && <Badge variant="secondary" className="rounded-sm px-1 font-normal">{activeFilterCount}</Badge>}
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent>
+                <DropdownMenuContent align="end" className="w-[200px]">
                     <DropdownMenuLabel>Filter by Difficulty</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     {(['New', 'Easy', 'Medium', 'Hard'] as WordDifficulty[]).map(d => (
@@ -462,16 +479,8 @@ function WordsClientContent() {
                             {d}
                         </DropdownMenuCheckboxItem>
                     ))}
-                </DropdownMenuContent>
-            </DropdownMenu>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="outline">
-                        Part of Speech {posFilters.size > 0 && `(${posFilters.size})`}
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                     <DropdownMenuLabel>Filter by Part of Speech</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Filter by Part of Speech</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     {partOfSpeechOptions.map(pos => (
                         <DropdownMenuCheckboxItem
@@ -485,6 +494,7 @@ function WordsClientContent() {
                     ))}
                 </DropdownMenuContent>
             </DropdownMenu>
+
             {initialDifficultyFilter && (
                 <Link href="/words" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground">
                     <Button variant="outline" size="sm" className="h-9 gap-1" onClick={() => setDifficultyFilters(new Set())}>
