@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { notFound, useParams, useRouter } from 'next/navigation';
@@ -14,7 +13,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
-import { speak } from '@/ai/flows/tts-flow';
 
 function DetailCard({ title, children }: { title: string; children: React.ReactNode }) {
   if (!children) return null;
@@ -45,29 +43,53 @@ export default function WordDetailsPage() {
   const [accent, setAccent] = useState<'US' | 'UK'>('US');
   const [speed, setSpeed] = useState([1]);
   const [volume, setVolume] = useState([1]);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    const handleVoicesChanged = () => {
+      setVoices(window.speechSynthesis.getVoices());
+    };
+    window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
+    handleVoicesChanged(); // Initial load
+    return () => {
+      window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
+    };
+  }, []);
 
 
   const handlePlayAudio = async (textToSpeak: string) => {
-    if (isPlaying === textToSpeak) return;
-    setIsPlaying(textToSpeak);
-    try {
-        const audioData = await speak({
-            text: textToSpeak,
-            accent: accent,
-            speed: speed[0],
-            volume: volume[0]
-        });
-        if (audioData) {
-            const audio = new Audio(audioData);
-            audio.play();
-            audio.onended = () => setIsPlaying(null);
-        } else {
-            setIsPlaying(null);
-        }
-    } catch (error) {
-        console.error("Failed to play audio:", error);
-        setIsPlaying(null);
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+        console.error('Speech synthesis not supported.');
+        return;
     }
+    
+    // Cancel any ongoing speech
+    if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+    }
+    
+    setIsPlaying(textToSpeak);
+
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    
+    const selectedVoice = voices.find(voice => 
+        accent === 'UK' ? voice.lang.startsWith('en-GB') : voice.lang.startsWith('en-US')
+    );
+
+    utterance.voice = selectedVoice || voices.find(voice => voice.lang.startsWith('en')) || null;
+    utterance.volume = volume[0]; // 0 to 1
+    utterance.rate = speed[0]; // 0.1 to 10
+    utterance.pitch = 1; // 0 to 2
+
+    utterance.onend = () => {
+        setIsPlaying(null);
+    };
+    utterance.onerror = (event) => {
+        console.error('Speech synthesis error:', event.error);
+        setIsPlaying(null);
+    };
+
+    window.speechSynthesis.speak(utterance);
   };
 
   const VerbFormRow = ({ label, data }: { label: string, data?: VerbFormDetail }) => {
@@ -196,7 +218,7 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
                     <p className="text-xl text-muted-foreground">{word.partOfSpeech}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" onClick={() => handlePlayAudio(word.word)} disabled={isPlaying === word.word}>
+                    <Button variant="outline" size="icon" onClick={() => handlePlayAudio(word.word)} disabled={!!isPlaying}>
                         <Volume2 className={isPlaying === word.word ? 'animate-pulse' : ''} />
                     </Button>
                     <Popover>
@@ -234,7 +256,7 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
                                         <Slider
                                             id="speed"
                                             min={0.5}
-                                            max={1.5}
+                                            max={2}
                                             step={0.1}
                                             defaultValue={speed}
                                             onValueChange={setSpeed}
@@ -332,5 +354,3 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
     </PageTemplate>
   );
 }
-
-    
