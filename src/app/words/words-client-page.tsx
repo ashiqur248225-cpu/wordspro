@@ -1,7 +1,8 @@
+
 'use client';
 import { useState, useEffect, useCallback, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { PlusCircle, Upload, X, Filter } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { PlusCircle, Upload, X, Filter, BookOpenCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageTemplate } from '@/components/page-template';
 import {
@@ -52,6 +53,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 const verbFormDetailSchema = z.object({
   word: z.string().optional(),
@@ -104,6 +107,13 @@ const bulkImportSchema = z.array(bulkImportWordSchema);
 
 type FilterType = WordDifficulty | "Today's" | "Learned";
 
+const quizTypes = [
+    { id: 'mcq-en-bn', label: 'MCQ (English to Bengali)' },
+    { id: 'spelling', label: 'Spelling Test', comingSoon: true },
+    { id: 'fill-blanks', label: 'Fill-in-the-Blanks', comingSoon: true },
+];
+
+
 function WordsClientContent() {
   const [isClient, setIsClient] = useState(false);
   const [allWords, setAllWords] = useState<Word[]>([]);
@@ -111,6 +121,8 @@ function WordsClientContent() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingWord, setEditingWord] = useState<Word | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isExamOpen, setIsExamOpen] = useState(false);
+  const [selectedQuizType, setSelectedQuizType] = useState(quizTypes[0].id);
   const [importJson, setImportJson] = useState('');
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -119,6 +131,7 @@ function WordsClientContent() {
 
   const { toast } = useToast();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialDifficultyFilter = searchParams.get('difficulty') as WordDifficulty | null;
 
   useEffect(() => {
@@ -143,12 +156,8 @@ function WordsClientContent() {
   }, [fetchWords]);
 
   useEffect(() => {
-    if (initialDifficultyFilter && ['Easy', 'Medium', 'Hard', 'New'].includes(initialDifficultyFilter)) {
-        if (initialDifficultyFilter === 'New') {
-            setDifficultyFilters(new Set(["Today's"]));
-        } else {
-            setDifficultyFilters(new Set([initialDifficultyFilter]));
-        }
+    if (initialDifficultyFilter && ['Easy', 'Medium', 'Hard'].includes(initialDifficultyFilter)) {
+        setDifficultyFilters(new Set([initialDifficultyFilter]));
     }
   }, [initialDifficultyFilter]);
 
@@ -166,11 +175,11 @@ function WordsClientContent() {
         const today = new Date().toDateString();
         words = words.filter(word => {
             let matches = false;
-            if (difficultyFilters.has("Today's")) {
-                if (new Date(word.createdAt).toDateString() === today) matches = true;
+            if (difficultyFilters.has("Today's") && new Date(word.createdAt).toDateString() === today) {
+                matches = true;
             }
-            if (difficultyFilters.has("Learned")) {
-                if (word.difficulty === 'Easy') matches = true;
+            if (difficultyFilters.has("Learned") && word.difficulty === 'Easy') {
+                matches = true;
             }
             if (difficultyFilters.has(word.difficulty)) {
                 matches = true;
@@ -331,6 +340,20 @@ function WordsClientContent() {
     }
   };
 
+  const handleStartExam = () => {
+      const wordIds = filteredWords.map(w => w.id);
+      if (wordIds.length === 0) {
+          toast({
+              variant: 'destructive',
+              title: 'No Words Selected',
+              description: 'Please filter a list of words to start an exam.',
+          });
+          return;
+      }
+      router.push(`/learn?wordIds=${JSON.stringify(wordIds)}`);
+      setIsExamOpen(false);
+  };
+
   const toggleDifficultyFilter = (difficulty: FilterType) => {
     setDifficultyFilters(prev => {
         const next = new Set(prev);
@@ -468,6 +491,39 @@ function WordsClientContent() {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        <Dialog open={isExamOpen} onOpenChange={setIsExamOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Start a Custom Exam</DialogTitle>
+                    <DialogDescription>
+                        Choose a quiz type for the <span className="font-bold">{filteredWords.length}</span> currently filtered words.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <RadioGroup value={selectedQuizType} onValueChange={setSelectedQuizType}>
+                        <div className="space-y-2">
+                            {quizTypes.map((quiz) => (
+                                <div key={quiz.id} className="flex items-center">
+                                    <RadioGroupItem value={quiz.id} id={quiz.id} disabled={quiz.comingSoon} />
+                                    <Label htmlFor={quiz.id} className="ml-2">
+                                        {quiz.label} {quiz.comingSoon && <span className="text-xs text-muted-foreground">(Soon)</span>}
+                                    </Label>
+                                </div>
+                            ))}
+                        </div>
+                    </RadioGroup>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="secondary">Cancel</Button>
+                    </DialogClose>
+                    <Button type="button" onClick={handleStartExam}>
+                        Start Exam
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
         
         <div className="flex items-center gap-2 mb-4">
             <Input 
@@ -513,13 +569,20 @@ function WordsClientContent() {
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            {initialDifficultyFilter && (
-                <Link href="/words" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground">
-                    <Button variant="outline" size="sm" className="h-9 gap-1" onClick={() => setDifficultyFilters(new Set())}>
-                        <X className="h-3.5 w-3.5" />
-                        Clear URL Filter
-                    </Button>
-                </Link>
+            <Button variant="outline" size="sm" className="h-9 gap-1" onClick={() => setIsExamOpen(true)}>
+                <BookOpenCheck className="h-3.5 w-3.5" />
+                Start Exam
+            </Button>
+
+            {hasActiveFilters && (
+                <Button variant="ghost" size="sm" className="h-9 gap-1 text-muted-foreground" onClick={() => {
+                    setSearchTerm('');
+                    setDifficultyFilters(new Set());
+                    setPosFilters(new Set());
+                }}>
+                    <X className="h-3.5 w-3.5" />
+                    Clear Filters
+                </Button>
             )}
         </div>
         
@@ -565,5 +628,3 @@ export function WordsClientPage() {
         </Suspense>
     )
 }
-
-    

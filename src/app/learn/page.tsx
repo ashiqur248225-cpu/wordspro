@@ -1,31 +1,37 @@
+
+'use client';
+
 import Link from 'next/link';
 import { PageTemplate } from '@/components/page-template';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, SpellCheck, Replace, FileQuestion } from 'lucide-react';
-import Image from 'next/image';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
 const quizTypes = [
   {
+    id: 'mcq-en-bn',
     title: 'MCQ (English to Bengali)',
     description: 'Choose the correct Bengali meaning for the English word.',
     icon: FileQuestion,
-    comingSoon: true,
   },
   {
+    id: 'mcq-bn-en',
     title: 'MCQ (Bengali to English)',
     description: 'Choose the correct English word for the Bengali meaning.',
     icon: FileQuestion,
     comingSoon: true,
   },
   {
+    id: 'spelling',
     title: 'Spelling Test',
     description: 'Listen to the word and spell it correctly.',
     icon: SpellCheck,
     comingSoon: true,
   },
   {
+    id: 'fill-blanks',
     title: 'Fill-in-the-Blanks',
     description: 'Complete the sentence with the correct word.',
     icon: Replace,
@@ -33,12 +39,22 @@ const quizTypes = [
   },
 ];
 
-export default function LearnPage() {
+function LearnPageContent() {
+  const searchParams = useSearchParams();
+  const wordIdsParam = searchParams.get('wordIds');
+  const wordIds = wordIdsParam ? JSON.parse(wordIdsParam) : [];
+
   return (
     <PageTemplate
       title="Learning Sessions"
       description="Engage in quizzes to master your vocabulary."
     >
+      {wordIds.length > 0 && (
+        <div className="mb-6 p-4 bg-secondary rounded-lg">
+            <h3 className="font-semibold text-lg">Custom Quiz Session</h3>
+            <p className="text-muted-foreground">You are about to start a quiz with a selected set of <span className="font-bold text-primary">{wordIds.length}</span> words. Choose a quiz type below to begin.</p>
+        </div>
+      )}
       <h3 className="text-2xl font-bold mb-4">Choose a quiz type:</h3>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {quizTypes.map((quiz) => (
@@ -49,9 +65,11 @@ export default function LearnPage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">{quiz.description}</p>
-              <Button className="w-full" disabled>
-                Start Quiz
-                {quiz.comingSoon && <span className="ml-2 text-xs">(Soon)</span>}
+              <Button className="w-full" asChild disabled={quiz.comingSoon}>
+                <Link href={wordIds.length > 0 ? `/quiz/${quiz.id}?wordIds=${JSON.stringify(wordIds)}` : `/quiz/${quiz.id}`}>
+                    Start Quiz
+                    {quiz.comingSoon && <span className="ml-2 text-xs">(Soon)</span>}
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -59,4 +77,13 @@ export default function LearnPage() {
       </div>
     </PageTemplate>
   );
+}
+
+
+export default function LearnPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <LearnPageContent />
+        </Suspense>
+    )
 }
