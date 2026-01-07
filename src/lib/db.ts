@@ -1,5 +1,5 @@
 'use client';
-import { openDB, type DBSchema } from 'idb';
+import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { Word, Note } from './types';
 
 interface WordProDB extends DBSchema {
@@ -14,32 +14,40 @@ interface WordProDB extends DBSchema {
   };
 }
 
-const dbPromise = openDB<WordProDB>('WordProDB', 1, {
-  upgrade(db) {
-    if (!db.objectStoreNames.contains('words')) {
-      const store = db.createObjectStore('words', {
-        keyPath: 'id',
-        autoIncrement: true,
-      });
-      store.createIndex('difficulty', 'difficulty');
-      store.createIndex('word', 'word', { unique: true });
-    }
-    if (!db.objectStoreNames.contains('notes')) {
-      db.createObjectStore('notes', {
-        keyPath: 'id',
-        autoIncrement: true,
-      });
-    }
-  },
-});
+let dbPromise: Promise<IDBPDatabase<WordProDB>> | null = null;
+
+const getDbInstance = () => {
+  if (!dbPromise) {
+    dbPromise = openDB<WordProDB>('WordProDB', 1, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains('words')) {
+          const store = db.createObjectStore('words', {
+            keyPath: 'id',
+            autoIncrement: true,
+          });
+          store.createIndex('difficulty', 'difficulty');
+          store.createIndex('word', 'word', { unique: true });
+        }
+        if (!db.objectStoreNames.contains('notes')) {
+          db.createObjectStore('notes', {
+            keyPath: 'id',
+            autoIncrement: true,
+          });
+        }
+      },
+    });
+  }
+  return dbPromise;
+};
+
 
 export const getDB = async () => {
-    return await dbPromise;
+    return getDbInstance();
 }
 
 // Word Functions
 export async function addWord(word: Omit<Word, 'id' | 'createdAt' | 'updatedAt'>) {
-    const db = await dbPromise;
+    const db = await getDbInstance();
     const now = new Date().toISOString();
     return db.add('words', { 
         ...word, 
@@ -49,28 +57,28 @@ export async function addWord(word: Omit<Word, 'id' | 'createdAt' | 'updatedAt'>
 }
 
 export async function getAllWords() {
-    const db = await dbPromise;
+    const db = await getDbInstance();
     return db.getAll('words');
 }
 
 export async function getWord(id: number) {
-    const db = await dbPromise;
+    const db = await getDbInstance();
     return db.get('words', id);
 }
 
 export async function updateWord(word: Word) {
-    const db = await dbPromise;
+    const db = await getDbInstance();
     const now = new Date().toISOString();
     return db.put('words', { ...word, updatedAt: now });
 }
 
 export async function deleteWord(id: number) {
-    const db = await dbPromise;
+    const db = await getDbInstance();
     return db.delete('words', id);
 }
 
 export async function getWordsByDifficulty(difficulty: ('Hard' | 'Medium')[]) {
-    const db = await dbPromise;
+    const db = await getDbInstance();
     const tx = db.transaction('words', 'readonly');
     const index = tx.store.index('difficulty');
     const promises = difficulty.map(level => index.getAll(level));
@@ -80,7 +88,7 @@ export async function getWordsByDifficulty(difficulty: ('Hard' | 'Medium')[]) {
 }
 
 export async function getWordsForQuiz(count: number) {
-    const db = await dbPromise;
+    const db = await getDbInstance();
     let words = await getWordsByDifficulty(['Hard', 'Medium']);
     if (words.length < count) {
         const allWords = await getAllWords();
@@ -93,7 +101,7 @@ export async function getWordsForQuiz(count: number) {
 
 // Note Functions
 export async function addNote(note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>) {
-    const db = await dbPromise;
+    const db = await getDbInstance();
     const now = new Date().toISOString();
     return db.add('notes', { 
         ...note, 
@@ -103,17 +111,17 @@ export async function addNote(note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>
 }
 
 export async function getAllNotes() {
-    const db = await dbPromise;
+    const db = await getDbInstance();
     return db.getAll('notes');
 }
 
 export async function updateNote(note: Note) {
-    const db = await dbPromise;
+    const db = await getDbInstance();
     const now = new Date().toISOString();
     return db.put('notes', { ...note, updatedAt: now });
 }
 
 export async function deleteNote(id: number) {
-    const db = await dbPromise;
+    const db = await getDbInstance();
     return db.delete('notes', id);
 }
