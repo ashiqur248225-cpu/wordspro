@@ -4,7 +4,7 @@ import type { Word, Note } from './types';
 
 interface WordProDB extends DBSchema {
   words: {
-    key: number;
+    key: string; // Changed to string for UUID
     value: Word;
     indexes: { 'difficulty': string; 'word': string };
   };
@@ -18,24 +18,38 @@ let dbPromise: Promise<IDBPDatabase<WordProDB>> | null = null;
 
 const getDbInstance = () => {
   if (typeof window === 'undefined') {
+    // Return a mock object or null on the server
     return null;
   }
   if (!dbPromise) {
-    dbPromise = openDB<WordProDB>('WordProDB', 1, {
-      upgrade(db) {
-        if (!db.objectStoreNames.contains('words')) {
-          const store = db.createObjectStore('words', {
-            keyPath: 'id',
-            autoIncrement: true,
-          });
-          store.createIndex('difficulty', 'difficulty');
-          store.createIndex('word', 'word', { unique: true });
+    dbPromise = openDB<WordProDB>('WordProDB', 2, { // Bumped version to 2
+      upgrade(db, oldVersion, newVersion, transaction) {
+        if (oldVersion < 1) {
+            // Initial schema
+             if (!db.objectStoreNames.contains('words')) {
+                const store = db.createObjectStore('words', {
+                    keyPath: 'id',
+                });
+                store.createIndex('difficulty', 'difficulty');
+                store.createIndex('word', 'word', { unique: true });
+            }
+            if (!db.objectStoreNames.contains('notes')) {
+                db.createObjectStore('notes', {
+                    keyPath: 'id',
+                    autoIncrement: true,
+                });
+            }
         }
-        if (!db.objectStoreNames.contains('notes')) {
-          db.createObjectStore('notes', {
-            keyPath: 'id',
-            autoIncrement: true,
-          });
+        if (oldVersion < 2) {
+             // Migration for version 2
+            if (db.objectStoreNames.contains('words')) {
+                db.deleteObjectStore('words');
+            }
+            const store = db.createObjectStore('words', {
+                keyPath: 'id',
+            });
+            store.createIndex('difficulty', 'difficulty');
+            store.createIndex('word', 'word', { unique: true });
         }
       },
     });
@@ -53,11 +67,47 @@ export async function addWord(word: Omit<Word, 'id' | 'createdAt' | 'updatedAt'>
     const db = await getDbInstance();
     if (!db) return;
     const now = new Date().toISOString();
+    const newId = crypto.randomUUID();
     return db.add('words', { 
-        ...word, 
+        ...word,
+        id: newId,
         createdAt: now, 
         updatedAt: now,
-    } as any);
+    } as Word);
+}
+
+export async function bulkAddWords(words: Omit<Word, 'id' | 'createdAt' | 'updatedAt'>[]) {
+    const db = await getDbInstance();
+    if (!db) return { successCount: 0, errorCount: 0, errors: [] };
+
+    const tx = db.transaction('words', 'readwrite');
+    let successCount = 0;
+    let errorCount = 0;
+    const errors: { word: string, error: string }[] = [];
+    const now = new Date().toISOString();
+
+    for (const word of words) {
+        try {
+            const newId = crypto.randomUUID();
+            const wordToAdd: Word = {
+                ...word,
+                id: newId,
+                createdAt: now,
+                updatedAt: now,
+                difficulty: 'New',
+                correct_count: 0,
+                wrong_count: { spelling: 0, meaning: 0 },
+                total_exams: 0,
+            };
+            await tx.store.add(wordToAdd);
+            successCount++;
+        } catch (e: any) {
+            errorCount++;
+            errors.push({ word: word.word, error: e.message || 'Unknown error' });
+        }
+    }
+    await tx.done;
+    return { successCount, errorCount, errors };
 }
 
 export async function getAllWords() {
@@ -66,7 +116,7 @@ export async function getAllWords() {
     return db.getAll('words');
 }
 
-export async function getWord(id: number) {
+export async function getWord(id: string) { // id is now string
     const db = await getDbInstance();
     if (!db) return undefined;
     return db.get('words', id);
@@ -79,7 +129,7 @@ export async function updateWord(word: Word) {
     return db.put('words', { ...word, updatedAt: now });
 }
 
-export async function deleteWord(id: number) {
+export async function deleteWord(id: string) { // id is now string
     const db = await getDbInstance();
     if (!db) return;
     return db.delete('words', id);

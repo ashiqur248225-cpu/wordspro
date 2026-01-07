@@ -18,7 +18,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogClose
+  DialogClose,
+  DialogDescription
 } from '@/components/ui/dialog';
 import {
     Form,
@@ -37,9 +38,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
-import type { Word, WordDifficulty } from '@/lib/types';
+import type { Word, WordDifficulty, VerbForms } from '@/lib/types';
 import { partOfSpeechOptions } from '@/lib/types';
-import { addWord, getAllWords, deleteWord, updateWord, getWordsByDifficulty } from '@/lib/db';
+import { addWord, getAllWords, deleteWord, updateWord, bulkAddWords } from '@/lib/db';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import {
@@ -50,20 +51,56 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
+const verbFormDetailSchema = z.object({
+  word: z.string().optional(),
+  pronunciation: z.string().optional(),
+  bangla_meaning: z.string().optional(),
+  usage_timing: z.string().optional(),
+}).optional();
+
+const verbFormsSchema = z.object({
+    v1_present: verbFormDetailSchema,
+    v2_past: verbFormDetailSchema,
+    v3_past_participle: verbFormDetailSchema,
+    form_examples: z.object({
+        v1: z.string().optional(),
+        v2: z.string().optional(),
+        v3: z.string().optional(),
+    }).optional(),
+}).optional();
+
 
 const wordSchema = z.object({
   word: z.string().min(1, 'Word is required'),
   meaning: z.string().min(1, 'Meaning is required'),
   partOfSpeech: z.enum(partOfSpeechOptions),
-  explanation: z.string().optional(),
-  syllables: z.string().optional(),
+  meaning_explanation: z.string().optional(),
+  syllables: z.string().optional(), //
   usageDistinction: z.string().optional(),
   synonyms: z.string().optional(),
   antonyms: z.string().optional(),
   exampleSentences: z.string().optional(),
+  verb_forms: verbFormsSchema.nullable(),
 });
 
-type WordFormData = Omit<z.infer<typeof wordSchema>, 'difficulty'>;
+type WordFormData = z.infer<typeof wordSchema>;
+
+// Bulk import schema
+const bulkImportWordSchema = z.object({
+  word: z.string(),
+  meaning: z.string(),
+  meaning_explanation: z.string().optional(),
+  parts_of_speech: z.enum(partOfSpeechOptions),
+  syllables: z.array(z.string()).optional(),
+  usage_distinction: z.string().optional(),
+  example_sentences: z.array(z.string()).optional(),
+  verb_forms: verbFormsSchema.nullable().optional(),
+  synonyms: z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])).optional(),
+  antonyms: z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])).optional(),
+});
+const bulkImportSchema = z.array(bulkImportWordSchema);
 
 
 function WordsClientContent() {
@@ -71,6 +108,8 @@ function WordsClientContent() {
   const [filteredWords, setFilteredWords] = useState<Word[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingWord, setEditingWord] = useState<Word | null>(null);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [importJson, setImportJson] = useState('');
   
   const [searchTerm, setSearchTerm] = useState('');
   const [difficultyFilters, setDifficultyFilters] = useState<Set<WordDifficulty>>(new Set());
@@ -83,7 +122,7 @@ function WordsClientContent() {
   const fetchWords = useCallback(async () => {
     try {
         const words = await getAllWords();
-        setAllWords(words.sort((a, b) => b.id - a.id));
+        setAllWords(words.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } catch (error) {
         toast({
             variant: "destructive",
@@ -130,23 +169,40 @@ function WordsClientContent() {
       word: '',
       meaning: '',
       partOfSpeech: 'noun',
-      explanation: '',
+      meaning_explanation: '',
       syllables: '',
       usageDistinction: '',
       synonyms: '',
       antonyms: '',
       exampleSentences: '',
+      verb_forms: null,
     },
   });
 
+  const arrayToString = (arr: any[] | undefined) => Array.isArray(arr) ? arr.map(item => typeof item === 'object' ? item.word : item).join(', ') : '';
+  const examplesToString = (arr: any[] | undefined) => Array.isArray(arr) ? arr.join('\n') : '';
+
+  const stringToArray = (str: string | undefined) => str ? str.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const examplesToArray = (str: string | undefined) => str ? str.split('\n').map(s => s.trim()).filter(Boolean) : [];
+
+
   const onSubmit = async (data: WordFormData) => {
     try {
+        const payload: Omit<Word, 'id' | 'createdAt' | 'updatedAt' | 'difficulty'> & { difficulty?: WordDifficulty } = {
+          ...data,
+          partOfSpeech: data.partOfSpeech,
+          syllables: stringToArray(data.syllables),
+          synonyms: stringToArray(data.synonyms),
+          antonyms: stringToArray(data.antonyms),
+          exampleSentences: examplesToArray(data.exampleSentences),
+        };
+
         if (editingWord) {
-            await updateWord({ ...editingWord, ...data });
+            await updateWord({ ...editingWord, ...payload });
             toast({ title: 'Word updated successfully' });
         } else {
             const newWordData: Omit<Word, 'id' | 'createdAt' | 'updatedAt'> = {
-                ...data,
+                ...payload,
                 difficulty: 'New'
             };
             await addWord(newWordData);
@@ -169,9 +225,10 @@ function WordsClientContent() {
     setEditingWord(word);
     form.reset({
       ...word,
-      synonyms: Array.isArray(word.synonyms) ? word.synonyms.join(', ') : '',
-      antonyms: Array.isArray(word.antonyms) ? word.antonyms.join(', ') : '',
-      exampleSentences: Array.isArray(word.exampleSentences) ? word.exampleSentences.join('\n') : '',
+      syllables: word.syllables?.join(', '),
+      synonyms: arrayToString(word.synonyms),
+      antonyms: arrayToString(word.antonyms),
+      exampleSentences: examplesToString(word.exampleSentences),
     });
     setIsFormOpen(true);
   };
@@ -182,7 +239,7 @@ function WordsClientContent() {
     setIsFormOpen(true);
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     try {
         await deleteWord(id);
         toast({ title: 'Word deleted successfully' });
@@ -195,6 +252,47 @@ function WordsClientContent() {
         });
     }
   }
+
+  const handleBulkImport = async () => {
+    try {
+        const jsonData = JSON.parse(importJson);
+        const parsedData = bulkImportSchema.parse(jsonData);
+        
+        const wordsToInsert = parsedData.map(w => ({
+            ...w,
+            partOfSpeech: w.parts_of_speech,
+        }));
+
+        const result = await bulkAddWords(wordsToInsert);
+        
+        toast({
+            title: 'Bulk Import Complete',
+            description: `${result.successCount} words imported successfully. ${result.errorCount} failed.`,
+        });
+
+        if (result.errorCount > 0) {
+            console.error('Import errors:', result.errors);
+        }
+
+        await fetchWords();
+        setIsImportOpen(false);
+        setImportJson('');
+
+    } catch (error: any) {
+        let description = "An unknown error occurred.";
+        if (error instanceof z.ZodError) {
+            description = "JSON data does not match the required format. Check console for details.";
+            console.error(error.errors);
+        } else if (error instanceof SyntaxError) {
+            description = "Invalid JSON format. Please check your syntax.";
+        }
+        toast({
+            variant: 'destructive',
+            title: 'Import Failed',
+            description: description,
+        });
+    }
+  };
 
   const toggleDifficultyFilter = (difficulty: WordDifficulty) => {
     setDifficultyFilters(prev => {
@@ -225,13 +323,15 @@ function WordsClientContent() {
 
   const hasActiveFilters = difficultyFilters.size > 0 || posFilters.size > 0 || searchTerm !== '';
 
+  const isVerb = form.watch('partOfSpeech') === 'verb';
+
   return (
     <PageTemplate
       title={pageTitle}
       description={pageDescription}
       actions={
         <>
-          <Button size="sm" variant="outline" className="h-8 gap-1">
+          <Button size="sm" variant="outline" className="h-8 gap-1" onClick={() => setIsImportOpen(true)}>
             <Upload className="h-3.5 w-3.5" />
             <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
               Import
@@ -247,7 +347,9 @@ function WordsClientContent() {
       }
     >
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-            <DialogContent className="sm:max-w-[625px]">
+            <DialogContent className="sm:max-w-[725px]">
+              <ScrollArea className="max-h-[80vh]">
+                <div className="p-6">
                 <DialogHeader>
                     <DialogTitle>{editingWord ? 'Edit Word' : 'Add New Word'}</DialogTitle>
                 </DialogHeader>
@@ -259,12 +361,28 @@ function WordsClientContent() {
                         <FormField control={form.control} name="meaning" render={({ field }) => (
                             <FormItem><FormLabel>Meaning</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
-                         <FormField control={form.control} name="partOfSpeech" render={({ field }) => (
+                        <FormField control={form.control} name="partOfSpeech" render={({ field }) => (
                             <FormItem className="col-span-2"><FormLabel>Part of Speech</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                                 <SelectContent>{partOfSpeechOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                             </Select><FormMessage /></FormItem>
                         )} />
+                        
+                        {isVerb && (
+                            <>
+                                <h4 className="col-span-2 font-semibold text-lg mt-4 border-b pb-2">Verb Forms</h4>
+                                <FormField control={form.control} name="verb_forms.v1_present.word" render={({ field }) => (
+                                    <FormItem><FormLabel>V1 (Present)</FormLabel><FormControl><Input placeholder="e.g., do" {...field} /></FormControl></FormItem>
+                                )} />
+                                <FormField control={form.control} name="verb_forms.v2_past.word" render={({ field }) => (
+                                    <FormItem><FormLabel>V2 (Past)</FormLabel><FormControl><Input placeholder="e.g., did" {...field} /></FormControl></FormItem>
+                                )} />
+                                <FormField control={form.control} name="verb_forms.v3_past_participle.word" render={({ field }) => (
+                                    <FormItem><FormLabel>V3 (Past Participle)</FormLabel><FormControl><Input placeholder="e.g., done" {...field} /></FormControl></FormItem>
+                                )} />
+                            </>
+                        )}
+
                         <FormField control={form.control} name="synonyms" render={({ field }) => (
                             <FormItem className="col-span-2"><FormLabel>Synonyms (comma-separated)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
@@ -274,12 +392,38 @@ function WordsClientContent() {
                         <FormField control={form.control} name="exampleSentences" render={({ field }) => (
                             <FormItem className="col-span-2"><FormLabel>Example Sentences (one per line)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
-                        <DialogFooter className="col-span-2">
+                        <DialogFooter className="col-span-2 pt-4">
                           <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
                           <Button type="submit">Save Word</Button>
                         </DialogFooter>
                     </form>
                 </Form>
+                </div>
+              </ScrollArea>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+            <DialogContent className="sm:max-w-[625px]">
+                <DialogHeader>
+                    <DialogTitle>Bulk Import Words</DialogTitle>
+                    <DialogDescription>
+                        Paste a JSON array of words to import them in bulk.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Textarea 
+                        placeholder="[&#10;  { &quot;word&quot;: &quot;example&quot;, &quot;meaning&quot;: &quot;...&quot;, ... },&#10;  ...&#10;]"
+                        value={importJson}
+                        onChange={(e) => setImportJson(e.target.value)}
+                        rows={15}
+                        className="font-mono text-xs"
+                    />
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
+                    <Button type="button" onClick={handleBulkImport}>Import Words</Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
         
