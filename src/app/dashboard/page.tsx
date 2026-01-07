@@ -1,0 +1,53 @@
+import Link from 'next/link';
+import { ArrowUpRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { PageTemplate } from '@/components/page-template';
+import { StatsCards } from './stats-cards';
+import { ProgressChart } from './progress-chart';
+
+export default function Dashboard() {
+  return (
+    <PageTemplate
+      title="Dashboard"
+      description="An overview of your learning journey."
+    >
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatsCards />
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4">
+          <CardHeader>
+            <CardTitle>Word Mastery</CardTitle>
+            <CardDescription>
+              A breakdown of words by your comfort level.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <ProgressChart />
+          </CardContent>
+        </Card>
+        <Card className="col-span-4 lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>
+              You've mastered 5 words this week. Keep going!
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Placeholder for recent activity feed */}
+            <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed">
+                <p className="text-muted-foreground">No recent activity</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </PageTemplate>
+  );
+}

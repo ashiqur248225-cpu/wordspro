@@ -1,3 +1,22 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "dashboard-learn",
+      "description": "An illustration of a person studying with books and a lightbulb.",
+      "imageUrl": "https://images.unsplash.com/photo-1567206163313-9e34c830557a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxsZWFybmluZyUyMHN0dWR5fGVufDB8fHx8MTc2Nzc2ODAzMnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "learning study"
+    },
+    {
+      "id": "dashboard-add-word",
+      "description": "An illustration of a plus sign next to a dictionary.",
+      "imageUrl": "https://images.unsplash.com/photo-1706628099052-94eb198b8416?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxhZGQlMjBkaWN0aW9uYXJ5fGVufDB8fHx8MTc2Nzc5NjI1N3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "add dictionary"
+    },
+    {
+      "id": "quiz-background",
+      "description": "Abstract background for quiz session",
+      "imageUrl": "https://images.unsplash.com/photo-1565619624098-cf4168a7cd9d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMHBhdHRlcm58ZW58MHx8fHwxNzY3NzE5NTM3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract pattern"
+    }
+  ]
 }
