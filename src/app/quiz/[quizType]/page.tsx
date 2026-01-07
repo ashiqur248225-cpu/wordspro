@@ -1,9 +1,10 @@
 
 'use client';
-import { Suspense } from 'react';
+import { Suspense, use } from 'react';
 import { notFound } from 'next/navigation';
 
-function QuizPage({ params }: { params: { quizType: string } }) {
+function QuizPage({ params: paramsProp }: { params: { quizType: string } | Promise<{ quizType: string }> }) {
+    const params = use(paramsProp);
     if (params.quizType === 'mcq-en-bn') {
         // For now, redirect or show a coming soon message for other types
         return <div>MCQ English to Bengali Quiz will be here.</div>;
