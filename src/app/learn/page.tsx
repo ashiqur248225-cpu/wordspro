@@ -43,6 +43,18 @@ function LearnPageContent() {
   const searchParams = useSearchParams();
   const wordIdsParam = searchParams.get('wordIds');
   const wordIds = wordIdsParam ? JSON.parse(wordIdsParam) : [];
+  const quizTypeParam = searchParams.get('quizType');
+
+  // If a specific quiz type is passed via URL, redirect to it directly
+  if (quizTypeParam && wordIds.length > 0) {
+      const quizUrl = `/quiz/${quizTypeParam}?wordIds=${JSON.stringify(wordIds)}`;
+       // This is a client component, so we can use window.location for redirection
+       if (typeof window !== 'undefined') {
+        window.location.href = quizUrl;
+        return <PageTemplate title="Redirecting..." description="Please wait while we start your quiz."></PageTemplate>;
+      }
+  }
+
 
   return (
     <PageTemplate
@@ -87,3 +99,5 @@ export default function LearnPage() {
         </Suspense>
     )
 }
+
+    

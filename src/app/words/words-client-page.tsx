@@ -1,9 +1,8 @@
 'use client';
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { PlusCircle, Upload, X, Filter, BookOpenCheck, ListTree, MoreHorizontal, Search } from 'lucide-react';
+import { PlusCircle, Upload, Filter, BookOpenCheck, MoreHorizontal, Search, BookCopy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { PageTemplate } from '@/components/page-template';
 import {
   Table,
   TableBody,
@@ -51,10 +50,9 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuItem,
+  DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 
 const verbFormDetailSchema = z.object({
   word: z.string().optional(),
@@ -91,10 +89,17 @@ const wordSchema = z.object({
 type WordFormData = z.infer<typeof wordSchema>;
 
 // Bulk import schema
+const bulkImportVerbFormDetailSchema = z.object({
+  word: z.string().optional(),
+  pronunciation: z.string().optional(),
+  bangla_meaning: z.string().optional(),
+  usage_timing: z.string().optional(),
+}).optional();
+
 const bulkImportVerbFormsSchema = z.object({
-    v1_present: verbFormDetailSchema,
-    v2_past: verbFormDetailSchema,
-    v3_past_participle: verbFormDetailSchema,
+    v1_present: bulkImportVerbFormDetailSchema,
+    v2_past: bulkImportVerbFormDetailSchema,
+    v3_past_participle: bulkImportVerbFormDetailSchema,
     form_examples: z.object({
         v1: z.string().optional(),
         v2: z.string().optional(),
@@ -127,8 +132,6 @@ function WordsClientContent() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingWord, setEditingWord] = useState<Word | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
-  const [isExamOpen, setIsExamOpen] = useState(false);
-  const [selectedQuizType, setSelectedQuizType] = useState('mcq-en-bn');
   const [importJson, setImportJson] = useState('');
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -340,7 +343,7 @@ function WordsClientContent() {
     }
   };
 
-  const handleStartExam = () => {
+  const handleStartExam = (quizType: string) => {
       const wordIds = filteredWords.map(w => w.id);
       if (wordIds.length === 0) {
           toast({
@@ -350,12 +353,10 @@ function WordsClientContent() {
           });
           return;
       }
-      router.push(`/learn?wordIds=${JSON.stringify(wordIds)}`);
-      setIsExamOpen(false);
+      router.push(`/learn?quizType=${quizType}&wordIds=${JSON.stringify(wordIds)}`);
   };
   
   const pageTitle = `Words List (${filteredWords.length})`;
-  const pageDescription = 'Manage your collection of words.';
 
   const activeFilterCount = (difficultyFilter !== 'All' ? 1 : 0) + (posFilter !== 'All' ? 1 : 0);
 
@@ -364,6 +365,18 @@ function WordsClientContent() {
   if (!isMounted) {
     return null;
   }
+
+  const examTypes = [
+      { id: 'dynamic-revision', label: 'Dynamic Revision' },
+      { id: 'mcq-en-bn', label: 'MCQ (Eng to Ban)' },
+      { id: 'mcq-bn-en', label: 'MCQ (Ban to Eng)', disabled: true },
+      { id: 'spelling-meaning', label: 'Spelling (from Meaning)', disabled: true },
+      { id: 'spelling-listening', label: 'Spelling (from Listening)', disabled: true },
+      { id: 'fill-blanks-word', label: 'Fill in the Blanks (Word)', disabled: true },
+      { id: 'fill-blanks-sentence', label: 'Fill in the Blanks (Sentence)', disabled: true },
+      { id: 'verb-form-test', label: 'Verb Form Test', disabled: true },
+      { id: 'synonym-antonym-test', label: 'Synonym/Antonym Test', disabled: true },
+  ]
 
   return (
     <Suspense fallback={<div>Loading Words...</div>}>
@@ -468,43 +481,6 @@ function WordsClientContent() {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-
-        <Dialog open={isExamOpen} onOpenChange={setIsExamOpen}>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Start a Custom Exam</DialogTitle>
-                    <DialogDescription>
-                        Choose a quiz type for the <span className="font-bold">{filteredWords.length}</span> currently filtered words.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="py-4">
-                     <RadioGroup defaultValue="mcq-en-bn" onValueChange={setSelectedQuizType}>
-                        <div className="space-y-2">
-                            <div className="flex items-center">
-                                <RadioGroupItem value="mcq-en-bn" id="mcq-en-bn" />
-                                <Label htmlFor="mcq-en-bn" className="ml-2">MCQ (English to Bengali)</Label>
-                            </div>
-                            <div className="flex items-center">
-                                <RadioGroupItem value="spelling" id="spelling" disabled />
-                                <Label htmlFor="spelling" className="ml-2 text-muted-foreground">Spelling Test (Soon)</Label>
-                            </div>
-                            <div className="flex items-center">
-                                <RadioGroupItem value="fill-blanks" id="fill-blanks" disabled />
-                                <Label htmlFor="fill-blanks" className="ml-2 text-muted-foreground">Fill-in-the-Blanks (Soon)</Label>
-                            </div>
-                        </div>
-                    </RadioGroup>
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button type="button" variant="secondary">Cancel</Button>
-                    </DialogClose>
-                    <Button type="button" onClick={handleStartExam}>
-                        Start Exam
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
         
         <div className="flex items-center gap-2 mb-4">
             <div className="relative flex-1">
@@ -547,10 +523,26 @@ function WordsClientContent() {
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button variant="outline" size="sm" className="h-9 gap-1" onClick={() => setIsExamOpen(true)}>
-                <BookOpenCheck className="h-3.5 w-3.5" />
-                Start Exam
-            </Button>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 gap-1 bg-accent/20 text-accent-foreground">
+                        <BookCopy className="h-3.5 w-3.5" />
+                        Exam
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[240px]">
+                    <DropdownMenuLabel>Select Exam Type</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                        {examTypes.map(exam => (
+                             <DropdownMenuItem key={exam.id} onSelect={() => handleStartExam(exam.id)} disabled={exam.disabled}>
+                                {exam.label}
+                                {exam.disabled && <span className="text-xs text-muted-foreground ml-auto">(Soon)</span>}
+                             </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuGroup>
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
         
         <div className="rounded-lg border">
@@ -617,3 +609,5 @@ export function WordsClientPage() {
         </Suspense>
     )
 }
+
+    
