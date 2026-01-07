@@ -8,17 +8,19 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { PageTemplate } from '@/components/page-template';
 import { StatsCards } from './stats-cards';
 import { ProgressChart } from './progress-chart';
 import { WordReviewCard } from './word-review-card';
 
 export default function Dashboard() {
   return (
-    <PageTemplate
-      title="Dashboard"
-      description="An overview of your learning journey."
-    >
+    <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
+       <header className="flex h-14 items-center gap-4 px-6">
+        <div className="flex-1">
+          <h1 className="font-semibold text-lg">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">An overview of your learning journey.</p>
+        </div>
+      </header>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCards />
       </div>
@@ -54,6 +56,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-    </PageTemplate>
+    </div>
   );
 }
