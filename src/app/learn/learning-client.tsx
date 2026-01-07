@@ -20,7 +20,7 @@ interface AnswerFeedback {
     userAnswer: string;
 }
 
-const difficultyLevels: WordDifficulty[] = ['Hard', 'Medium', 'Easy', 'New'];
+const difficultyLevels: WordDifficulty[] = ['Easy', 'Medium', 'Hard'];
 
 export function LearningClient() {
     const [state, setState] = useState<LearningState>('loading');
