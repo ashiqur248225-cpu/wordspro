@@ -9,6 +9,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle } from 'lucide-react';
 import Link from 'next/link';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Terminal } from 'lucide-react';
+
 
 type LearningState = 'loading' | 'testing' | 'feedback' | 'finished';
 type DifficultyFilter = 'All' | "Today's" | 'Hard' | 'Medium' | 'Easy' | 'New';
@@ -27,67 +30,106 @@ export function LearningClient() {
     const [wordQueue, setWordQueue] = useState<Word[]>([]);
     const [currentWord, setCurrentWord] = useState<Word | null>(null);
     const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
+    const [testedWordIds, setTestedWordIds] = useState<Set<string>>(new Set());
+    const [fallbackMessage, setFallbackMessage] = useState<string | null>(null);
 
     const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('Hard');
-    const [examType, setExamType] = useState<ExamType>('mcq-en-bn');
+    const [examType, setExamType] = useState<ExamType>('dynamic');
 
     const selectWords = useCallback(async () => {
         setState('loading');
+        setTestedWordIds(new Set()); // Reset tested words for new session
         let words: Word[] = [];
         const today = new Date().toDateString();
 
+        // 1. Initial Filtering
         if (difficultyFilter === 'All') {
             words = await getAllWords();
         } else if (difficultyFilter === "Today's") {
             const allWords = await getAllWords();
             words = allWords.filter(w => new Date(w.createdAt).toDateString() === today);
-        } else {
+        } else if (['New', 'Easy', 'Medium', 'Hard'].includes(difficultyFilter)) {
             words = await getWordsByDifficulty([difficultyFilter as WordDifficulty]);
+        } else { // Default to Hard and Medium if no filter is selected
+            words = await getWordsByDifficulty(['Hard', 'Medium']);
         }
+        
+        // 2. Prioritization
+        const getNextWord = (wordList: Word[]): Word | null => {
+            if (wordList.length === 0) return null;
 
-        // Smart Revision: Prioritize Hard, then Medium, then others.
-        const priorityMap = { 'Hard': 1, 'Medium': 2, 'Easy': 3, 'New': 4 };
-        const sortedWords = words.sort((a, b) => priorityMap[a.difficulty] - priorityMap[b.difficulty]);
+            // Highest Priority: Spelling errors
+            const spellingPriorityWords = wordList.filter(w => (w.wrong_count?.spelling || 0) >= 3);
+            if (spellingPriorityWords.length > 0) {
+                return spellingPriorityWords.sort((a, b) => (b.wrong_count?.spelling || 0) - (a.wrong_count?.spelling || 0))[0];
+            }
 
-        setWordQueue(sortedWords);
-    }, [difficultyFilter]);
+            // Second Priority: Difficulty Level (Hard > Medium > New > Easy)
+            for (const level of ['Hard', 'Medium', 'New', 'Easy']) {
+                const levelWords = wordList.filter(w => w.difficulty === level);
+                if (levelWords.length > 0) {
+                    // Third Priority: Least recently reviewed
+                    // This part is simplified as we don't have `last_reviewed` yet.
+                    // We can just pick one from this level.
+                    return levelWords[0];
+                }
+            }
+            return wordList[0];
+        };
+        
+        const initialWord = getNextWord(words.filter(w => !testedWordIds.has(w.id)));
+
+        setWordQueue(words);
+        setCurrentWord(initialWord);
+
+        if (initialWord) {
+            setState('testing');
+        } else {
+            setState('finished');
+        }
+    }, [difficultyFilter, testedWordIds]);
 
     useEffect(() => {
         selectWords();
-    }, [selectWords]);
+    }, [difficultyFilter, examType]); // Re-run when filters change
 
-    useEffect(() => {
-        if (wordQueue.length > 0) {
-            setCurrentWord(wordQueue[0]);
-            setState('testing');
-        } else if(state !== 'loading') {
-            setState('finished');
-            setCurrentWord(null);
+
+    const determineTestType = (word: Word): ExamType => {
+        if (examType !== 'dynamic') {
+             // Fallback logic for user's choice
+             if (examType === 'verb-form' && word.partOfSpeech !== 'verb') {
+                 setFallbackMessage("This word is not a verb. Switching to MCQ test.");
+                 return 'mcq-en-bn';
+             }
+             return examType;
         }
-    }, [wordQueue, state]);
 
+        // Dynamic Revision Logic
+        if ((word.wrong_count?.spelling || 0) > 1) return 'spelling';
+        if (word.partOfSpeech === 'verb' && word.verb_forms) return 'verb-form';
+        return 'mcq-en-bn'; // Default dynamic choice
+    }
 
     const handleAnswer = async (isCorrect: boolean, userAnswer: string) => {
         if (!currentWord) return;
 
         const newStats = { ...currentWord };
-        if(isCorrect) {
+        if (isCorrect) {
             newStats.correct_count = (newStats.correct_count || 0) + 1;
-            // Promote word difficulty
             const currentDifficultyIndex = difficultyLevels.indexOf(newStats.difficulty);
             if (currentDifficultyIndex > 0) {
                 newStats.difficulty = difficultyLevels[currentDifficultyIndex - 1];
             }
         } else {
+            // Simplified wrong count update
             newStats.wrong_count = {
-                spelling: newStats.wrong_count?.spelling || 0,
-                meaning: (newStats.wrong_count?.meaning || 0) + 1, // Assuming MCQ is meaning based
+                spelling: (newStats.wrong_count?.spelling || 0), // update this in spelling test
+                meaning: (newStats.wrong_count?.meaning || 0) + 1,
             };
-            // Demote word difficulty
-             const currentDifficultyIndex = difficultyLevels.indexOf(newStats.difficulty);
-             if (currentDifficultyIndex < difficultyLevels.length - 1) {
-                 newStats.difficulty = difficultyLevels[currentDifficultyIndex + 1];
-             }
+            const currentDifficultyIndex = difficultyLevels.indexOf(newStats.difficulty);
+            if (currentDifficultyIndex < difficultyLevels.length - 1) {
+                newStats.difficulty = difficultyLevels[currentDifficultyIndex + 1];
+            }
         }
         newStats.total_exams = (newStats.total_exams || 0) + 1;
 
@@ -98,15 +140,40 @@ export function LearningClient() {
     };
 
     const handleNextWord = () => {
-        setState('loading');
-        setFeedback(null);
-        setWordQueue(prev => prev.slice(1));
+        if (!currentWord) return;
+
+        const newTestedWordIds = new Set(testedWordIds);
+        newTestedWordIds.add(currentWord.id);
+        setTestedWordIds(newTestedWordIds);
+
+        const remainingWords = wordQueue.filter(word => !newTestedWordIds.has(word.id));
+        
+        if (remainingWords.length > 0) {
+            // Smart selection logic can be re-applied here if needed,
+            // or just take the next from the sorted queue.
+            // For simplicity, we'll just process the queue.
+            setCurrentWord(remainingWords[0]);
+            setState('testing');
+            setFeedback(null);
+            setFallbackMessage(null);
+        } else {
+            setState('finished');
+            setCurrentWord(null);
+        }
+    };
+    
+    const restartSession = () => {
+        setTestedWordIds(new Set());
+        selectWords();
     };
 
-    const renderTest = () => {
-        if (!currentWord) return <p>No word available.</p>;
 
-        switch (examType) {
+    const renderTest = () => {
+        if (!currentWord) return <p>Loading word...</p>;
+
+        const testToRender = determineTestType(currentWord);
+
+        switch (testToRender) {
             case 'mcq-en-bn':
                 return <McqEnBnQuiz words={[currentWord]} onAnswer={handleAnswer} />;
             case 'spelling':
@@ -116,7 +183,7 @@ export function LearningClient() {
                 return (
                     <div className="text-center p-8">
                         <h3 className="font-semibold text-lg">Coming Soon!</h3>
-                        <p className="text-muted-foreground">This exam type is under construction.</p>
+                        <p className="text-muted-foreground">The '{testToRender}' exam type is under construction.</p>
                     </div>
                 )
         }
@@ -132,13 +199,12 @@ export function LearningClient() {
     ];
 
      const examTypeOptions: { value: ExamType, label: string, disabled: boolean }[] = [
-        { value: 'dynamic', label: 'Dynamic Revision', disabled: true },
+        { value: 'dynamic', label: 'Dynamic Revision', disabled: false },
         { value: 'mcq-en-bn', label: 'MCQ (Eng to Ban)', disabled: false },
         { value: 'spelling', label: 'Spelling Test', disabled: true },
         { value: 'fill-blanks', label: 'Fill-in-the-Blanks', disabled: true },
         { value: 'verb-form', label: 'Verb Form Test', disabled: true },
     ];
-
 
     return (
         <div className="space-y-4">
@@ -156,6 +222,15 @@ export function LearningClient() {
                     </SelectContent>
                 </Select>
             </div>
+             {fallbackMessage && (
+                <Alert>
+                    <Terminal className="h-4 w-4" />
+                    <AlertTitle>Heads up!</AlertTitle>
+                    <AlertDescription>
+                       {fallbackMessage}
+                    </AlertDescription>
+                </Alert>
+            )}
 
             <Card className="min-h-[300px] flex items-center justify-center">
                 <CardContent className="w-full pt-6">
@@ -168,17 +243,16 @@ export function LearningClient() {
                             onNext={handleNextWord}
                         />
                     )}
-                    {state === 'finished' && <FinishedState onRestart={selectWords} />}
+                    {state === 'finished' && <FinishedState onRestart={restartSession} />}
                 </CardContent>
             </Card>
         </div>
     );
 }
 
-
 function LoadingState() {
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-pulse">
             <Skeleton className="h-8 w-3/4 mx-auto" />
             <div className="grid grid-cols-2 gap-4 mt-6">
                 <Skeleton className="h-12 w-full" />
@@ -234,3 +308,5 @@ function FinishedState({ onRestart }: { onRestart: () => void }) {
         </div>
     )
 }
+
+    
