@@ -63,7 +63,7 @@ export function SpellingQuiz({ word, onAnswer, mode = 'meaning' }: SpellingQuizP
                     </>
                 )}
             </div>
-            <form onSubmit={handleSubmit} className="flex items-center gap-2">
+            <form onSubmit={handleSubmit} className="flex flex-col items-stretch gap-4">
                 <Input
                     ref={inputRef}
                     value={userAnswer}
