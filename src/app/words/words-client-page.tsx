@@ -95,7 +95,10 @@ const bulkImportWordSchema = z.object({
     word: z.string(),
     meaning: z.string(),
     meaning_explanation: z.string().optional(),
-    parts_of_speech: z.enum(partOfSpeechOptions),
+    parts_of_speech: z.preprocess(
+        (val) => typeof val === 'string' ? val.toLowerCase() : val,
+        z.enum(partOfSpeechOptions)
+    ),
     syllables: z.array(z.string()).optional(),
     usage_distinction: z.string().optional(),
     example_sentences: z.array(z.string()).optional(),
@@ -150,10 +153,10 @@ function WordsClientContent() {
   }, [fetchWords]);
 
   useEffect(() => {
-    if (initialDifficultyFilter && ['Easy', 'Medium', 'Hard'].includes(initialDifficultyFilter)) {
+    if (isMounted && initialDifficultyFilter && ['Easy', 'Medium', 'Hard'].includes(initialDifficultyFilter)) {
         setDifficultyFilter(initialDifficultyFilter);
     }
-  }, [initialDifficultyFilter]);
+  }, [initialDifficultyFilter, isMounted]);
 
   useEffect(() => {
     let words = allWords;
@@ -201,7 +204,7 @@ function WordsClientContent() {
     },
   });
 
-  const arrayToString = (arr: any[] | undefined) => Array.isArray(arr) ? arr.map(item => typeof item === 'object' ? item.word : item).join(', ') : '';
+  const arrayToString = (arr: any[] | undefined) => Array.isArray(arr) ? arr.map(item => typeof item === 'object' && item !== null ? item.word : item).join(', ') : '';
   const examplesToString = (arr: any[] | undefined) => Array.isArray(arr) ? arr.join('\n') : '';
 
   const stringToArray = (str: string | undefined) => str ? str.split(',').map(s => s.trim()).filter(Boolean) : [];
@@ -580,3 +583,5 @@ export function WordsClientPage() {
         </Suspense>
     )
 }
+
+    
