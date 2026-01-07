@@ -92,16 +92,16 @@ type WordFormData = z.infer<typeof wordSchema>;
 
 // Bulk import schema
 const bulkImportWordSchema = z.object({
-  word: z.string(),
-  meaning: z.string(),
-  meaning_explanation: z.string().optional(),
-  parts_of_speech: z.enum(partOfSpeechOptions),
-  syllables: z.array(z.string()).optional(),
-  usage_distinction: z.string().optional(),
-  example_sentences: z.array(z.string()).optional(),
-  verb_forms: verbFormsSchema.nullable(),
-  synonyms: z.union([z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])), z.null()]).optional(),
-  antonyms: z.union([z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])), z.null()]).optional(),
+    word: z.string(),
+    meaning: z.string(),
+    meaning_explanation: z.string().optional(),
+    parts_of_speech: z.enum(partOfSpeechOptions),
+    syllables: z.array(z.string()).optional(),
+    usage_distinction: z.string().optional(),
+    example_sentences: z.array(z.string()).optional(),
+    verb_forms: verbFormsSchema.nullable().optional(),
+    synonyms: z.union([z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])), z.null()]).optional(),
+    antonyms: z.union([z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])), z.null()]).optional(),
 });
 const bulkImportSchema = z.array(bulkImportWordSchema);
 
@@ -294,14 +294,7 @@ function WordsClientContent() {
         const jsonData = JSON.parse(importJson);
         const parsedData = bulkImportSchema.parse(jsonData);
         
-        const wordsToInsert = parsedData.map(w => ({
-            ...w,
-            partOfSpeech: w.parts_of_speech,
-            usageDistinction: w.usage_distinction,
-            exampleSentences: w.example_sentences,
-        }));
-
-        const result = await bulkAddWords(wordsToInsert);
+        const result = await bulkAddWords(parsedData);
         
         toast({
             title: 'Bulk Import Complete',

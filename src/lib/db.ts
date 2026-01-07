@@ -1,3 +1,4 @@
+
 'use client';
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { Word, Note } from './types';
@@ -89,9 +90,19 @@ export async function bulkAddWords(words: any[]) {
     for (const word of words) {
         try {
             const newId = crypto.randomUUID();
+            // Map the incoming JSON structure to the Word type structure
             const wordToAdd: Word = {
-                ...word,
                 id: newId,
+                word: word.word,
+                meaning: word.meaning,
+                meaning_explanation: word.meaning_explanation,
+                partOfSpeech: word.parts_of_speech,
+                syllables: word.syllables,
+                usageDistinction: word.usage_distinction,
+                exampleSentences: word.example_sentences,
+                synonyms: word.synonyms,
+                antonyms: word.antonyms,
+                verb_forms: word.verb_forms,
                 createdAt: now,
                 updatedAt: now,
                 difficulty: 'New',
