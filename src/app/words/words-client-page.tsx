@@ -1,10 +1,11 @@
 
 
 
+
 'use client';
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { PlusCircle, Upload, X, Filter, BookOpenCheck, ListTree } from 'lucide-react';
+import { PlusCircle, Upload, X, Filter, BookOpenCheck, ListTree, MoreHorizontal, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageTemplate } from '@/components/page-template';
 import {
@@ -53,6 +54,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -110,7 +112,184 @@ const bulkImportWordSchema = z.object({
     meaning: z.string(),
     meaning_explanation: z.string().optional(),
     parts_of_speech: z.preprocess(
-        (val) => typeof val === 'string' ? val.toLowerCase() : val,
+        (val) => (typeof val === 'string' ? val.toLowerCase() : val),
+        z.enum(partOfSpeechOptions)
+    ),
+    syllables: z.array(z.string()).optional(),
+    usage_distinction: z.string().optional(),
+    example_sentences: z.array(z.string()).optional(),
+    verb_forms: bulkImportVerbFormsSchema,
+    synonyms: z.union([z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])), z.null()]).optional(),
+    antonyms: z.union([z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])), z'use client';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { PlusCircle, Upload, X, Filter, BookOpenCheck, ListTree, MoreHorizontal, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { PageTemplate } from '@/components/page-template';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+  DialogDescription
+} from '@/components/ui/dialog';
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+import type { Word, WordDifficulty } from '@/lib/types';
+import { partOfSpeechOptions } from '@/lib/types';
+import { addWord, getAllWords, deleteWord, updateWord, bulkAddWords } from '@/lib/db';
+import { useToast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+
+const verbFormDetailSchema = z.object({
+  word: z.string().optional(),
+  pronunciation: z'use client';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { PlusCircle, Upload, X, Filter, BookOpenCheck, ListTree, MoreHorizontal, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+  DialogDescription
+} from '@/components/ui/dialog';
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+import type { Word, WordDifficulty } from '@/lib/types';
+import { partOfSpeechOptions } from '@/lib/types';
+import { addWord, getAllWords, deleteWord, updateWord, bulkAddWords } from '@/lib/db';
+import { useToast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+
+const verbFormDetailSchema = z.object({
+  word: z.string().optional(),
+  pronunciation: z.string().optional(),
+  bangla_meaning: z.string().optional(),
+  usage_timing: z.string().optional(),
+}).optional();
+
+const verbFormsSchema = z.object({
+    v1_present: verbFormDetailSchema,
+    v2_past: verbFormDetailSchema,
+    v3_past_participle: verbFormDetailSchema,
+    form_examples: z.object({
+        v1: z.string().optional(),
+        v2: z.string().optional(),
+        v3: z.string().optional(),
+    }).optional(),
+});
+
+
+const wordSchema = z.object({
+  word: z.string().min(1, 'Word is required'),
+  meaning: z.string().min(1, 'Meaning is required'),
+  partOfSpeech: z.enum(partOfSpeechOptions),
+  meaning_explanation: z.string().optional(),
+  syllables: z.string().optional(), //
+  usageDistinction: z.string().optional(),
+  synonyms: z.string().optional(),
+  antonyms: z.string().optional(),
+  exampleSentences: z.string().optional(),
+  verb_forms: verbFormsSchema.nullable(),
+});
+
+type WordFormData = z.infer<typeof wordSchema>;
+
+// Bulk import schema
+const bulkImportVerbFormsSchema = z.object({
+    v1_present: verbFormDetailSchema,
+    v2_past: verbFormDetailSchema,
+    v3_past_participle: verbFormDetailSchema,
+    form_examples: z.object({
+        v1: z.string().optional(),
+        v2: z.string().optional(),
+        v3: z.string().optional(),
+    }).optional(),
+}).nullable();
+
+
+const bulkImportWordSchema = z.object({
+    word: z.string(),
+    meaning: z.string(),
+    meaning_explanation: z.string().optional(),
+    parts_of_speech: z.preprocess(
+        (val) => (typeof val === 'string' ? val.toLowerCase() : val),
         z.enum(partOfSpeechOptions)
     ),
     syllables: z.array(z.string()).optional(),
@@ -356,8 +535,8 @@ function WordsClientContent() {
       setIsExamOpen(false);
   };
   
-  const pageTitle = initialDifficultyFilter ? `${initialDifficultyFilter} Words` : 'Vocabulary';
-  const pageDescription = initialDifficultyFilter ? `A list of all words marked as ${initialDifficultyFilter.toLowerCase()}.` : 'Manage your collection of words.';
+  const pageTitle = `Words List (${filteredWords.length})`;
+  const pageDescription = 'Manage your collection of words.';
 
   const activeFilterCount = (difficultyFilter !== 'All' ? 1 : 0) + (posFilter !== 'All' ? 1 : 0);
 
@@ -369,26 +548,27 @@ function WordsClientContent() {
 
   return (
     <Suspense fallback={<div>Loading Words...</div>}>
-    <PageTemplate
-      title={pageTitle}
-      description={pageDescription}
-      actions={
-        <>
-          <Button size="sm" variant="outline" className="h-8 gap-1" onClick={() => setIsImportOpen(true)}>
-            <Upload className="h-3.5 w-3.5" />
-            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-              Import
-            </span>
-          </Button>
-          <Button size="sm" className="h-8 gap-1" onClick={handleAddNew}>
-            <PlusCircle className="h-3.5 w-3.5" />
-            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-              Add Word
-            </span>
-          </Button>
-        </>
-      }
-    >
+    <div className="p-4 md:p-6">
+        <header className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">{pageTitle}</h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" className="h-9 gap-1" onClick={() => setIsImportOpen(true)}>
+                <Upload className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                  Import
+                </span>
+              </Button>
+              <Button size="sm" className="h-9 gap-1" onClick={handleAddNew}>
+                <PlusCircle className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                  Add Word
+                </span>
+              </Button>
+            </div>
+        </header>
+
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogContent className="sm:max-w-[725px]">
               <ScrollArea className="max-h-[80vh]">
@@ -508,22 +688,24 @@ function WordsClientContent() {
         </Dialog>
         
         <div className="flex items-center gap-2 mb-4">
-            <Input 
-                placeholder="Search words or meanings..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-            />
+            <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    placeholder="Search words..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="pl-10 max-w-sm"
+                />
+            </div>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-9 gap-1">
                         <Filter className="h-3.5 w-3.5" />
-                        <span className="sr-only sm:not-sr-only">Filter</span>
                          {activeFilterCount > 0 && <Badge variant="secondary" className="rounded-sm px-1 font-normal">{activeFilterCount}</Badge>}
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[200px]">
-                    <DropdownMenuLabel>Filter by Difficulty</DropdownMenuLabel>
+                    <DropdownMenuLabel>Filter by Level</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuRadioGroup value={difficultyFilter} onValueChange={setDifficultyFilter}>
                         {(["All", "Today's", 'Learned', 'Easy', 'Medium', 'Hard'] as const).map(d => (
@@ -539,7 +721,7 @@ function WordsClientContent() {
                          <DropdownMenuRadioItem value="All">All</DropdownMenuRadioItem>
                         {partOfSpeechOptions.map(pos => (
                             <DropdownMenuRadioItem key={pos} value={pos}>
-                                {pos}
+                                {pos.charAt(0).toUpperCase() + pos.slice(1)}
                             </DropdownMenuRadioItem>
                         ))}
                     </DropdownMenuRadioGroup>
@@ -552,39 +734,57 @@ function WordsClientContent() {
             </Button>
         </div>
         
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead>Word</TableHead>
-                    <TableHead>Meaning</TableHead>
-                    <TableHead>Difficulty</TableHead>
-                    <TableHead>Added On</TableHead>
-                    <TableHead><span className="sr-only">Actions</span></TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {filteredWords.length > 0 ? filteredWords.map(word => (
-                    <TableRow key={word.id}>
-                        <TableCell className="font-medium">{word.word}</TableCell>
-                        <TableCell>{word.meaning}</TableCell>
-                        <TableCell><Badge variant={word.difficulty === 'Hard' ? 'destructive' : 'secondary'}>{word.difficulty}</Badge></TableCell>
-                        <TableCell>{new Date(word.createdAt).toLocaleDateString()}</TableCell>
-                        <TableCell className="text-right">
-                            <Button variant="ghost" size="sm" onClick={() => router.push(`/words/${word.id}`)}>Details</Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(word)}>Edit</Button>
-                            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(word.id)}>Delete</Button>
-                        </TableCell>
-                    </TableRow>
-                )) : (
+        <div className="rounded-lg border">
+            <Table>
+                <TableHeader>
                     <TableRow>
-                        <TableCell colSpan={5} className="text-center h-24">
-                           {activeFilterCount > 0 ? 'No words match your filters.' : 'No words added yet.'}
-                        </TableCell>
+                        <TableHead>Word</TableHead>
+                        <TableHead>Meaning</TableHead>
+                        <TableHead>Part of Speech</TableHead>
+                        <TableHead>Level</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                )}
-            </TableBody>
-        </Table>
-    </PageTemplate>
+                </TableHeader>
+                <TableBody>
+                    {filteredWords.length > 0 ? filteredWords.map(word => (
+                        <TableRow key={word.id}>
+                            <TableCell className="font-medium">{word.word}</TableCell>
+                            <TableCell>{word.meaning}</TableCell>
+                            <TableCell>{word.partOfSpeech.charAt(0).toUpperCase() + word.partOfSpeech.slice(1)}</TableCell>
+                            <TableCell><Badge variant={word.difficulty === 'Hard' ? 'destructive' : word.difficulty === 'New' ? 'outline' : 'secondary'}>{word.difficulty}</Badge></TableCell>
+                            <TableCell className="text-right">
+                               <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => router.push(`/words/${word.id}`)}>
+                                            Details
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleEdit(word)}>
+                                            Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem onClick={() => handleDelete(word.id)} className="text-destructive">
+                                            Delete
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TableCell>
+                        </TableRow>
+                    )) : (
+                        <TableRow>
+                            <TableCell colSpan={5} className="text-center h-24">
+                               {activeFilterCount > 0 ? 'No words match your filters.' : 'No words added yet.'}
+                            </TableCell>
+                        </TableRow>
+                    )}
+                </TableBody>
+            </Table>
+        </div>
+    </div>
     </Suspense>
   );
 }
@@ -598,7 +798,3 @@ export function WordsClientPage() {
         </Suspense>
     )
 }
-
-    
-
-    
