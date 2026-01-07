@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { PlusCircle, Upload, X, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -38,7 +38,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
-import type { Word, WordDifficulty, VerbForms } from '@/lib/types';
+import type { Word, WordDifficulty } from '@/lib/types';
 import { partOfSpeechOptions } from '@/lib/types';
 import { addWord, getAllWords, deleteWord, updateWord, bulkAddWords } from '@/lib/db';
 import { useToast } from '@/hooks/use-toast';
@@ -102,6 +102,7 @@ const bulkImportWordSchema = z.object({
 });
 const bulkImportSchema = z.array(bulkImportWordSchema);
 
+type FilterType = WordDifficulty | 'Added Today';
 
 function WordsClientContent() {
   const [isClient, setIsClient] = useState(false);
@@ -113,7 +114,7 @@ function WordsClientContent() {
   const [importJson, setImportJson] = useState('');
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [difficultyFilters, setDifficultyFilters] = useState<Set<WordDifficulty>>(new Set());
+  const [difficultyFilters, setDifficultyFilters] = useState<Set<FilterType>>(new Set());
   const [posFilters, setPosFilters] = useState<Set<Word['partOfSpeech']>>(new Set());
 
   const { toast } = useToast();
@@ -143,7 +144,11 @@ function WordsClientContent() {
 
   useEffect(() => {
     if (initialDifficultyFilter && ['Easy', 'Medium', 'Hard', 'New'].includes(initialDifficultyFilter)) {
-        setDifficultyFilters(new Set([initialDifficultyFilter]));
+        if (initialDifficultyFilter === 'New') {
+            setDifficultyFilters(new Set(['Added Today']));
+        } else {
+            setDifficultyFilters(new Set([initialDifficultyFilter]));
+        }
     }
   }, [initialDifficultyFilter]);
 
@@ -158,7 +163,13 @@ function WordsClientContent() {
     }
     
     if (difficultyFilters.size > 0) {
-        words = words.filter(word => difficultyFilters.has(word.difficulty));
+        const today = new Date().toDateString();
+        words = words.filter(word => {
+            if (difficultyFilters.has('Added Today')) {
+                if (new Date(word.createdAt).toDateString() === today) return true;
+            }
+            return difficultyFilters.has(word.difficulty);
+        });
     }
     
     if (posFilters.size > 0) {
@@ -313,7 +324,7 @@ function WordsClientContent() {
     }
   };
 
-  const toggleDifficultyFilter = (difficulty: WordDifficulty) => {
+  const toggleDifficultyFilter = (difficulty: FilterType) => {
     setDifficultyFilters(prev => {
         const next = new Set(prev);
         if (next.has(difficulty)) {
@@ -469,7 +480,7 @@ function WordsClientContent() {
                 <DropdownMenuContent align="end" className="w-[200px]">
                     <DropdownMenuLabel>Filter by Difficulty</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {(['New', 'Easy', 'Medium', 'Hard'] as WordDifficulty[]).map(d => (
+                    {(['Added Today', 'Easy', 'Medium', 'Hard'] as FilterType[]).map(d => (
                         <DropdownMenuCheckboxItem
                             key={d}
                             checked={difficultyFilters.has(d)}
