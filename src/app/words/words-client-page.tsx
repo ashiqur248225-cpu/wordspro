@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { PlusCircle, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,14 @@ import { partOfSpeechOptions } from '@/lib/types';
 import { addWord, getAllWords, deleteWord, updateWord, getWordsByDifficulty } from '@/lib/db';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const wordSchema = z.object({
   word: z.string().min(1, 'Word is required'),
@@ -53,30 +61,29 @@ const wordSchema = z.object({
   synonyms: z.string().optional(),
   antonyms: z.string().optional(),
   exampleSentences: z.string().optional(),
-  difficulty: z.enum(['New', 'Easy', 'Medium', 'Hard']),
 });
 
-type WordFormData = z.infer<typeof wordSchema>;
+type WordFormData = Omit<z.infer<typeof wordSchema>, 'difficulty'>;
 
 
 function WordsClientContent() {
-  const [words, setWords] = useState<Word[]>([]);
+  const [allWords, setAllWords] = useState<Word[]>([]);
+  const [filteredWords, setFilteredWords] = useState<Word[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingWord, setEditingWord] = useState<Word | null>(null);
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [difficultyFilters, setDifficultyFilters] = useState<Set<WordDifficulty>>(new Set());
+  const [posFilters, setPosFilters] = useState<Set<Word['partOfSpeech']>>(new Set());
 
   const { toast } = useToast();
   const searchParams = useSearchParams();
-  const difficultyFilter = searchParams.get('difficulty') as WordDifficulty | null;
+  const initialDifficultyFilter = searchParams.get('difficulty') as WordDifficulty | null;
 
   const fetchWords = useCallback(async () => {
     try {
-        let allWords: Word[];
-        if (difficultyFilter && ['Easy', 'Medium', 'Hard'].includes(difficultyFilter)) {
-            allWords = await getWordsByDifficulty([difficultyFilter]);
-        } else {
-            allWords = await getAllWords();
-        }
-        setWords(allWords.sort((a, b) => b.id - a.id));
+        const words = await getAllWords();
+        setAllWords(words.sort((a, b) => b.id - a.id));
     } catch (error) {
         toast({
             variant: "destructive",
@@ -84,11 +91,38 @@ function WordsClientContent() {
             description: "Could not load words from the database.",
         });
     }
-  }, [toast, difficultyFilter]);
+  }, [toast]);
 
   useEffect(() => {
     fetchWords();
   }, [fetchWords]);
+
+  useEffect(() => {
+    if (initialDifficultyFilter && ['Easy', 'Medium', 'Hard', 'New'].includes(initialDifficultyFilter)) {
+        setDifficultyFilters(new Set([initialDifficultyFilter]));
+    }
+  }, [initialDifficultyFilter]);
+
+  useEffect(() => {
+    let words = allWords;
+
+    if (searchTerm) {
+        words = words.filter(word => 
+            word.word.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            word.meaning.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }
+    
+    if (difficultyFilters.size > 0) {
+        words = words.filter(word => difficultyFilters.has(word.difficulty));
+    }
+    
+    if (posFilters.size > 0) {
+        words = words.filter(word => posFilters.has(word.partOfSpeech));
+    }
+
+    setFilteredWords(words);
+  }, [searchTerm, difficultyFilters, posFilters, allWords]);
   
   const form = useForm<WordFormData>({
     resolver: zodResolver(wordSchema),
@@ -102,7 +136,6 @@ function WordsClientContent() {
       synonyms: '',
       antonyms: '',
       exampleSentences: '',
-      difficulty: 'New',
     },
   });
 
@@ -112,7 +145,11 @@ function WordsClientContent() {
             await updateWord({ ...editingWord, ...data });
             toast({ title: 'Word updated successfully' });
         } else {
-            await addWord(data);
+            const newWordData: Omit<Word, 'id' | 'createdAt' | 'updatedAt'> = {
+                ...data,
+                difficulty: 'New'
+            };
+            await addWord(newWordData);
             toast({ title: 'Word added successfully' });
         }
         await fetchWords();
@@ -158,9 +195,35 @@ function WordsClientContent() {
         });
     }
   }
+
+  const toggleDifficultyFilter = (difficulty: WordDifficulty) => {
+    setDifficultyFilters(prev => {
+        const next = new Set(prev);
+        if (next.has(difficulty)) {
+            next.delete(difficulty);
+        } else {
+            next.add(difficulty);
+        }
+        return next;
+    });
+  };
+
+  const togglePosFilter = (pos: Word['partOfSpeech']) => {
+      setPosFilters(prev => {
+          const next = new Set(prev);
+          if (next.has(pos)) {
+              next.delete(pos);
+          } else {
+              next.add(pos);
+          }
+          return next;
+      });
+  };
   
-  const pageTitle = difficultyFilter ? `${difficultyFilter} Words` : 'Vocabulary';
-  const pageDescription = difficultyFilter ? `A list of all words marked as ${difficultyFilter.toLowerCase()}.` : 'Manage your collection of words.';
+  const pageTitle = initialDifficultyFilter ? `${initialDifficultyFilter} Words` : 'Vocabulary';
+  const pageDescription = initialDifficultyFilter ? `A list of all words marked as ${initialDifficultyFilter.toLowerCase()}.` : 'Manage your collection of words.';
+
+  const hasActiveFilters = difficultyFilters.size > 0 || posFilters.size > 0 || searchTerm !== '';
 
   return (
     <PageTemplate
@@ -197,15 +260,9 @@ function WordsClientContent() {
                             <FormItem><FormLabel>Meaning</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                          <FormField control={form.control} name="partOfSpeech" render={({ field }) => (
-                            <FormItem><FormLabel>Part of Speech</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormItem className="col-span-2"><FormLabel>Part of Speech</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                                 <SelectContent>{partOfSpeechOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
-                            </Select><FormMessage /></FormItem>
-                        )} />
-                        <FormField control={form.control} name="difficulty" render={({ field }) => (
-                            <FormItem><FormLabel>Difficulty</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                <SelectContent>{['New', 'Easy', 'Medium', 'Hard'].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                             </Select><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name="synonyms" render={({ field }) => (
@@ -226,16 +283,64 @@ function WordsClientContent() {
             </DialogContent>
         </Dialog>
         
-        {difficultyFilter && (
-            <div className="mb-4">
+        <div className="flex items-center gap-2 mb-4">
+            <Input 
+                placeholder="Search words or meanings..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="max-w-sm"
+            />
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                        Difficulty {difficultyFilters.size > 0 && `(${difficultyFilters.size})`}
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                    <DropdownMenuLabel>Filter by Difficulty</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {(['New', 'Easy', 'Medium', 'Hard'] as WordDifficulty[]).map(d => (
+                        <DropdownMenuCheckboxItem
+                            key={d}
+                            checked={difficultyFilters.has(d)}
+                            onSelect={(e) => e.preventDefault()}
+                            onCheckedChange={() => toggleDifficultyFilter(d)}
+                        >
+                            {d}
+                        </DropdownMenuCheckboxItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                        Part of Speech {posFilters.size > 0 && `(${posFilters.size})`}
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                     <DropdownMenuLabel>Filter by Part of Speech</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {partOfSpeechOptions.map(pos => (
+                        <DropdownMenuCheckboxItem
+                            key={pos}
+                            checked={posFilters.has(pos)}
+                            onSelect={(e) => e.preventDefault()}
+                            onCheckedChange={() => togglePosFilter(pos)}
+                        >
+                            {pos}
+                        </DropdownMenuCheckboxItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
+            {initialDifficultyFilter && (
                 <Link href="/words" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground">
-                    <Button variant="outline" size="sm" className="h-7 gap-1">
+                    <Button variant="outline" size="sm" className="h-9 gap-1" onClick={() => setDifficultyFilters(new Set())}>
                         <X className="h-3.5 w-3.5" />
-                        Clear filter
+                        Clear URL Filter
                     </Button>
                 </Link>
-            </div>
-        )}
+            )}
+        </div>
         
         <Table>
             <TableHeader>
@@ -248,7 +353,7 @@ function WordsClientContent() {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {words.length > 0 ? words.map(word => (
+                {filteredWords.length > 0 ? filteredWords.map(word => (
                     <TableRow key={word.id}>
                         <TableCell className="font-medium">{word.word}</TableCell>
                         <TableCell>{word.meaning}</TableCell>
@@ -260,7 +365,11 @@ function WordsClientContent() {
                         </TableCell>
                     </TableRow>
                 )) : (
-                    <TableRow><TableCell colSpan={5} className="text-center h-24">No words found for this filter.</TableCell></TableRow>
+                    <TableRow>
+                        <TableCell colSpan={5} className="text-center h-24">
+                           {hasActiveFilters ? 'No words match your filters.' : 'No words added yet.'}
+                        </TableCell>
+                    </TableRow>
                 )}
             </TableBody>
         </Table>
