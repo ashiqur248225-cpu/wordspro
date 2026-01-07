@@ -1,9 +1,10 @@
 
 
+
 'use client';
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { PlusCircle, Upload, X, Filter, BookOpenCheck } from 'lucide-react';
+import { PlusCircle, Upload, X, Filter, BookOpenCheck, ListTree } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageTemplate } from '@/components/page-template';
 import {
@@ -92,6 +93,18 @@ const wordSchema = z.object({
 type WordFormData = z.infer<typeof wordSchema>;
 
 // Bulk import schema
+const bulkImportVerbFormsSchema = z.object({
+    v1_present: verbFormDetailSchema,
+    v2_past: verbFormDetailSchema,
+    v3_past_participle: verbFormDetailSchema,
+    form_examples: z.object({
+        v1: z.string().optional(),
+        v2: z.string().optional(),
+        v3: z.string().optional(),
+    }).optional(),
+}).nullable();
+
+
 const bulkImportWordSchema = z.object({
     word: z.string(),
     meaning: z.string(),
@@ -103,7 +116,7 @@ const bulkImportWordSchema = z.object({
     syllables: z.array(z.string()).optional(),
     usage_distinction: z.string().optional(),
     example_sentences: z.array(z.string()).optional(),
-    verb_forms: verbFormsSchema.nullable().optional(),
+    verb_forms: bulkImportVerbFormsSchema,
     synonyms: z.union([z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])), z.null()]).optional(),
     antonyms: z.union([z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])), z.null()]).optional(),
 });
@@ -557,6 +570,7 @@ function WordsClientContent() {
                         <TableCell><Badge variant={word.difficulty === 'Hard' ? 'destructive' : 'secondary'}>{word.difficulty}</Badge></TableCell>
                         <TableCell>{new Date(word.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
+                            <Button variant="ghost" size="sm" onClick={() => router.push(`/words/${word.id}`)}>Details</Button>
                             <Button variant="ghost" size="sm" onClick={() => handleEdit(word)}>Edit</Button>
                             <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(word.id)}>Delete</Button>
                         </TableCell>
