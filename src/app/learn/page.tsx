@@ -34,33 +34,12 @@ const quizTypes = [
 ];
 
 export default function LearnPage() {
-    const heroImage = PlaceHolderImages.find(p => p.id === 'quiz-background');
   return (
     <PageTemplate
       title="Learning Sessions"
       description="Engage in quizzes to master your vocabulary."
     >
-      <div className="relative w-full h-64 rounded-lg overflow-hidden mb-8">
-        {heroImage && 
-            <Image 
-                src={heroImage.imageUrl} 
-                alt={heroImage.description} 
-                fill 
-                className="object-cover" 
-                data-ai-hint={heroImage.imageHint}
-            />
-        }
-        <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center p-4">
-            <h2 className="text-3xl font-bold text-white">Ready for a challenge?</h2>
-            <p className="text-lg text-white/90 mt-2 mb-4">Our smart revision system prioritizes words you find difficult.</p>
-            <Button size="lg" disabled>
-                Start Smart Session <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <p className="text-xs text-white/70 mt-2">Coming Soon!</p>
-        </div>
-      </div>
-      
-      <h3 className="text-2xl font-bold mb-4">Or, choose a specific quiz type:</h3>
+      <h3 className="text-2xl font-bold mb-4">Choose a quiz type:</h3>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {quizTypes.map((quiz) => (
           <Card key={quiz.title}>
