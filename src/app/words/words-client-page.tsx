@@ -142,7 +142,7 @@ function WordsClientContent() {
   const fetchWords = useCallback(async () => {
     try {
         const words = await getAllWords();
-        setAllWords(words.sort((a, b) => new Date(b.createdAt).getTime() - new Date(b.createdAt).getTime()));
+        setAllWords(words.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } catch (error) {
         toast({
             variant: "destructive",
