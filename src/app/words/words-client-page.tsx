@@ -43,14 +43,14 @@ import type { Word, WordDifficulty } from '@/lib/types';
 import { partOfSpeechOptions } from '@/lib/types';
 import { addWord, getAllWords, deleteWord, updateWord, bulkAddWords } from '@/lib/db';
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -126,8 +126,8 @@ function WordsClientContent() {
   const [importJson, setImportJson] = useState('');
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [difficultyFilters, setDifficultyFilters] = useState<Set<FilterType>>(new Set());
-  const [posFilters, setPosFilters] = useState<Set<Word['partOfSpeech']>>(new Set());
+  const [difficultyFilter, setDifficultyFilter] = useState<string>('All');
+  const [posFilter, setPosFilter] = useState<string>('All');
 
   const { toast } = useToast();
   const searchParams = useSearchParams();
@@ -157,7 +157,7 @@ function WordsClientContent() {
 
   useEffect(() => {
     if (initialDifficultyFilter && ['Easy', 'Medium', 'Hard'].includes(initialDifficultyFilter)) {
-        setDifficultyFilters(new Set([initialDifficultyFilter]));
+        setDifficultyFilter(initialDifficultyFilter);
     }
   }, [initialDifficultyFilter]);
 
@@ -171,29 +171,25 @@ function WordsClientContent() {
         );
     }
     
-    if (difficultyFilters.size > 0) {
+    if (difficultyFilter && difficultyFilter !== 'All') {
         const today = new Date().toDateString();
         words = words.filter(word => {
-            let matches = false;
-            if (difficultyFilters.has("Today's") && new Date(word.createdAt).toDateString() === today) {
-                matches = true;
+            if (difficultyFilter === "Today's") {
+                return new Date(word.createdAt).toDateString() === today;
             }
-            if (difficultyFilters.has("Learned") && word.difficulty === 'Easy') {
-                matches = true;
+            if (difficultyFilter === "Learned") {
+                return word.difficulty === 'Easy';
             }
-            if (difficultyFilters.has(word.difficulty)) {
-                matches = true;
-            }
-            return matches;
+            return word.difficulty === difficultyFilter;
         });
     }
     
-    if (posFilters.size > 0) {
-        words = words.filter(word => posFilters.has(word.partOfSpeech));
+    if (posFilter && posFilter !== 'All') {
+        words = words.filter(word => word.partOfSpeech === posFilter);
     }
 
     setFilteredWords(words);
-  }, [searchTerm, difficultyFilters, posFilters, allWords]);
+  }, [searchTerm, difficultyFilter, posFilter, allWords]);
   
   const form = useForm<WordFormData>({
     resolver: zodResolver(wordSchema),
@@ -353,35 +349,11 @@ function WordsClientContent() {
       router.push(`/learn?wordIds=${JSON.stringify(wordIds)}`);
       setIsExamOpen(false);
   };
-
-  const toggleDifficultyFilter = (difficulty: FilterType) => {
-    setDifficultyFilters(prev => {
-        const next = new Set(prev);
-        if (next.has(difficulty)) {
-            next.delete(difficulty);
-        } else {
-            next.add(difficulty);
-        }
-        return next;
-    });
-  };
-
-  const togglePosFilter = (pos: Word['partOfSpeech']) => {
-      setPosFilters(prev => {
-          const next = new Set(prev);
-          if (next.has(pos)) {
-              next.delete(pos);
-          } else {
-              next.add(pos);
-          }
-          return next;
-      });
-  };
   
   const pageTitle = initialDifficultyFilter ? `${initialDifficultyFilter} Words` : 'Vocabulary';
   const pageDescription = initialDifficultyFilter ? `A list of all words marked as ${initialDifficultyFilter.toLowerCase()}.` : 'Manage your collection of words.';
 
-  const activeFilterCount = difficultyFilters.size + posFilters.size;
+  const activeFilterCount = (difficultyFilter !== 'All' ? 1 : 0) + (posFilter !== 'All' ? 1 : 0);
   const hasActiveFilters = activeFilterCount > 0 || searchTerm !== '';
 
   const isVerb = form.watch('partOfSpeech') === 'verb';
@@ -543,29 +515,24 @@ function WordsClientContent() {
                 <DropdownMenuContent align="end" className="w-[200px]">
                     <DropdownMenuLabel>Filter by Difficulty</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {(["Today's", 'Learned', 'Easy', 'Medium', 'Hard'] as FilterType[]).map(d => (
-                        <DropdownMenuCheckboxItem
-                            key={d}
-                            checked={difficultyFilters.has(d)}
-                            onSelect={(e) => e.preventDefault()}
-                            onCheckedChange={() => toggleDifficultyFilter(d)}
-                        >
-                            {d}
-                        </DropdownMenuCheckboxItem>
-                    ))}
+                    <DropdownMenuRadioGroup value={difficultyFilter} onValueChange={setDifficultyFilter}>
+                        {(["All", "Today's", 'Learned', 'Easy', 'Medium', 'Hard'] as const).map(d => (
+                            <DropdownMenuRadioItem key={d} value={d}>
+                                {d}
+                            </DropdownMenuRadioItem>
+                        ))}
+                    </DropdownMenuRadioGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Filter by Part of Speech</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {partOfSpeechOptions.map(pos => (
-                        <DropdownMenuCheckboxItem
-                            key={pos}
-                            checked={posFilters.has(pos)}
-                            onSelect={(e) => e.preventDefault()}
-                            onCheckedChange={() => togglePosFilter(pos)}
-                        >
-                            {pos}
-                        </DropdownMenuCheckboxItem>
-                    ))}
+                    <DropdownMenuRadioGroup value={posFilter} onValueChange={setPosFilter}>
+                         <DropdownMenuRadioItem value="All">All</DropdownMenuRadioItem>
+                        {partOfSpeechOptions.map(pos => (
+                            <DropdownMenuRadioItem key={pos} value={pos}>
+                                {pos}
+                            </DropdownMenuRadioItem>
+                        ))}
+                    </DropdownMenuRadioGroup>
                 </DropdownMenuContent>
             </DropdownMenu>
 
@@ -577,8 +544,8 @@ function WordsClientContent() {
             {hasActiveFilters && (
                 <Button variant="ghost" size="sm" className="h-9 gap-1 text-muted-foreground" onClick={() => {
                     setSearchTerm('');
-                    setDifficultyFilters(new Set());
-                    setPosFilters(new Set());
+                    setDifficultyFilter('All');
+                    setPosFilter('All');
                 }}>
                     <X className="h-3.5 w-3.5" />
                     Clear Filters
@@ -628,5 +595,7 @@ export function WordsClientPage() {
         </Suspense>
     )
 }
+
+    
 
     
