@@ -99,19 +99,11 @@ const bulkImportWordSchema = z.object({
   syllables: z.array(z.string()).optional(),
   usage_distinction: z.string().optional(),
   example_sentences: z.array(z.string()).optional(),
-  verb_forms: verbFormsSchema.nullable(),
-  synonyms: z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])).nullable().optional(),
-  antonyms: z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])).nullable().optional(),
+  verb_forms: verbFormsSchema.nullable().optional(),
+  synonyms: z.union([z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])), z.null()]).optional(),
+  antonyms: z.union([z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])), z.null()]).optional(),
 });
 const bulkImportSchema = z.array(bulkImportWordSchema);
-
-type FilterType = "Today's" | "Learned" | WordDifficulty;
-
-const quizTypes = [
-    { id: 'mcq-en-bn', label: 'MCQ (English to Bengali)' },
-    { id: 'spelling', label: 'Spelling Test', comingSoon: true },
-    { id: 'fill-blanks', label: 'Fill-in-the-Blanks', comingSoon: true },
-];
 
 
 function WordsClientContent() {
@@ -121,7 +113,7 @@ function WordsClientContent() {
   const [editingWord, setEditingWord] = useState<Word | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isExamOpen, setIsExamOpen] = useState(false);
-  const [selectedQuizType, setSelectedQuizType] = useState(quizTypes[0].id);
+  const [selectedQuizType, setSelectedQuizType] = useState('mcq-en-bn');
   const [importJson, setImportJson] = useState('');
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -133,7 +125,8 @@ function WordsClientContent() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const initialDifficultyFilter = searchParams.get('difficulty') as WordDifficulty | null;
+  
+  const initialDifficultyFilter = searchParams.get('difficulty');
 
   useEffect(() => {
     setIsMounted(true);
@@ -360,13 +353,7 @@ function WordsClientContent() {
   const isVerb = form.watch('partOfSpeech') === 'verb';
   
   if (!isMounted) {
-    return (
-        <PageTemplate title="Vocabulary" description="Loading your word collection...">
-            <div className="flex items-center justify-center h-64">
-                <div className="text-muted-foreground">Loading...</div>
-            </div>
-        </PageTemplate>
-    );
+    return null;
   }
 
   return (
@@ -481,16 +468,20 @@ function WordsClientContent() {
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
-                    <RadioGroup value={selectedQuizType} onValueChange={setSelectedQuizType}>
+                     <RadioGroup defaultValue="mcq-en-bn" onValueChange={setSelectedQuizType}>
                         <div className="space-y-2">
-                            {quizTypes.map((quiz) => (
-                                <div key={quiz.id} className="flex items-center">
-                                    <RadioGroupItem value={quiz.id} id={quiz.id} disabled={quiz.comingSoon} />
-                                    <Label htmlFor={quiz.id} className="ml-2">
-                                        {quiz.label} {quiz.comingSoon && <span className="text-xs text-muted-foreground">(Soon)</span>}
-                                    </Label>
-                                </div>
-                            ))}
+                            <div className="flex items-center">
+                                <RadioGroupItem value="mcq-en-bn" id="mcq-en-bn" />
+                                <Label htmlFor="mcq-en-bn" className="ml-2">MCQ (English to Bengali)</Label>
+                            </div>
+                            <div className="flex items-center">
+                                <RadioGroupItem value="spelling" id="spelling" disabled />
+                                <Label htmlFor="spelling" className="ml-2 text-muted-foreground">Spelling Test (Soon)</Label>
+                            </div>
+                            <div className="flex items-center">
+                                <RadioGroupItem value="fill-blanks" id="fill-blanks" disabled />
+                                <Label htmlFor="fill-blanks" className="ml-2 text-muted-foreground">Fill-in-the-Blanks (Soon)</Label>
+                            </div>
                         </div>
                     </RadioGroup>
                 </div>
@@ -548,18 +539,6 @@ function WordsClientContent() {
                 <BookOpenCheck className="h-3.5 w-3.5" />
                 Start Exam
             </Button>
-
-            {hasActiveFilters && (
-                <Button variant="ghost" size="sm" className="h-9 gap-1 text-muted-foreground" onClick={() => {
-                    setSearchTerm('');
-                    setDifficultyFilter('All');
-                    setPosFilter('All');
-                    router.push('/words');
-                }}>
-                    <X className="h-3.5 w-3.5" />
-                    Clear Filters
-                </Button>
-            )}
         </div>
         
         <Table>
@@ -607,5 +586,3 @@ export function WordsClientPage() {
         </Suspense>
     )
 }
-
-    
