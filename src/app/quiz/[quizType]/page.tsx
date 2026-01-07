@@ -1,18 +1,16 @@
-
 'use client';
 import { Suspense, use } from 'react';
-import { notFound, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { McqEnBnQuiz } from '@/app/quiz/mcq-en-bn';
 import { PageTemplate } from '@/components/page-template';
+import type { Word } from '@/lib/types';
 
-function QuizPage({ params: paramsProp }: { params: { quizType: string } | Promise<{ quizType: string }> }) {
+function QuizPage({ params: paramsProp, words: wordsProp }: { params: { quizType: string } | Promise<{ quizType: string }>, words: Word[] | Promise<Word[]> }) {
     const params = use(paramsProp);
-    const searchParams = useSearchParams();
-    const wordIdsParam = searchParams.get('wordIds');
-    const wordIds = wordIdsParam ? JSON.parse(wordIdsParam) : [];
+    const words = use(wordsProp);
 
     if (params.quizType === 'mcq-en-bn') {
-        return <McqEnBnQuiz wordIds={wordIds} />;
+        return <McqEnBnQuiz words={words} />;
     } else {
         // For now, other quiz types are not implemented
         return (
@@ -29,6 +27,10 @@ function QuizPage({ params: paramsProp }: { params: { quizType: string } | Promi
 }
 
 export default function Page({ params }: { params: { quizType: string } }) {
+    const searchParams = useSearchParams();
+    // This is a placeholder for the actual word fetching logic that will be in LearningClient
+    const words: Word[] = [];
+
     return (
         <Suspense fallback={
             <PageTemplate title="Loading Quiz..." description="Please wait while we prepare your questions.">
@@ -37,7 +39,7 @@ export default function Page({ params }: { params: { quizType: string } }) {
                 </div>
             </PageTemplate>
         }>
-            <QuizPage params={params} />
+            <QuizPage params={params} words={words} />
         </Suspense>
     );
 }

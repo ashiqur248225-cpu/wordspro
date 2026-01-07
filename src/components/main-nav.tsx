@@ -14,7 +14,7 @@ import {
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/words', label: 'Words', icon: BookText },
-  { href: '/learn', label: 'Learn', icon: BrainCircuit },
+  { href: '/learn', label: 'Exam', icon: BrainCircuit },
   { href: '/notes', label: 'Notes', icon: Notebook },
 ];
 
