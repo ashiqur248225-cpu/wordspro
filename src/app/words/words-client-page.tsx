@@ -72,7 +72,7 @@ const verbFormsSchema = z.object({
         v2: z.string().optional(),
         v3: z.string().optional(),
     }).optional(),
-}).optional();
+});
 
 
 const wordSchema = z.object({
@@ -99,7 +99,7 @@ const bulkImportWordSchema = z.object({
   syllables: z.array(z.string()).optional(),
   usage_distinction: z.string().optional(),
   example_sentences: z.array(z.string()).optional(),
-  verb_forms: verbFormsSchema.nullable().optional(),
+  verb_forms: verbFormsSchema.nullable(),
   synonyms: z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])).nullable().optional(),
   antonyms: z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])).nullable().optional(),
 });
@@ -127,16 +127,22 @@ function WordsClientContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('All');
   const [posFilter, setPosFilter] = useState<string>('All');
+  const [isMounted, setIsMounted] = useState(false);
+
 
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialDifficultyFilter = searchParams.get('difficulty') as WordDifficulty | null;
 
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const fetchWords = useCallback(async () => {
     try {
         const words = await getAllWords();
-        setAllWords(words.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        setAllWords(words.sort((a, b) => new Date(b.createdAt).getTime() - new Date(b.createdAt).getTime()));
     } catch (error) {
         toast({
             variant: "destructive",
@@ -352,6 +358,16 @@ function WordsClientContent() {
   const hasActiveFilters = activeFilterCount > 0 || searchTerm !== '';
 
   const isVerb = form.watch('partOfSpeech') === 'verb';
+  
+  if (!isMounted) {
+    return (
+        <PageTemplate title="Vocabulary" description="Loading your word collection...">
+            <div className="flex items-center justify-center h-64">
+                <div className="text-muted-foreground">Loading...</div>
+            </div>
+        </PageTemplate>
+    );
+  }
 
   return (
     <Suspense fallback={<div>Loading Words...</div>}>
