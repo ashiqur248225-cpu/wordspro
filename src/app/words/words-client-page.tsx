@@ -1,6 +1,7 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
-import { PlusCircle, Upload } from 'lucide-react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { PlusCircle, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageTemplate } from '@/components/page-template';
 import {
@@ -16,7 +17,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogClose
 } from '@/components/ui/dialog';
@@ -39,8 +39,9 @@ import * as z from 'zod';
 
 import type { Word, WordDifficulty } from '@/lib/types';
 import { partOfSpeechOptions } from '@/lib/types';
-import { addWord, getAllWords, deleteWord, updateWord } from '@/lib/db';
+import { addWord, getAllWords, deleteWord, updateWord, getWordsByDifficulty } from '@/lib/db';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 const wordSchema = z.object({
   word: z.string().min(1, 'Word is required'),
@@ -58,16 +59,23 @@ const wordSchema = z.object({
 type WordFormData = z.infer<typeof wordSchema>;
 
 
-export function WordsClientPage() {
+function WordsClientContent() {
   const [words, setWords] = useState<Word[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingWord, setEditingWord] = useState<Word | null>(null);
 
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const difficultyFilter = searchParams.get('difficulty') as WordDifficulty | null;
 
   const fetchWords = useCallback(async () => {
     try {
-        const allWords = await getAllWords();
+        let allWords: Word[];
+        if (difficultyFilter && ['Easy', 'Medium', 'Hard'].includes(difficultyFilter)) {
+            allWords = await getWordsByDifficulty([difficultyFilter]);
+        } else {
+            allWords = await getAllWords();
+        }
         setWords(allWords.sort((a, b) => b.id - a.id));
     } catch (error) {
         toast({
@@ -76,7 +84,7 @@ export function WordsClientPage() {
             description: "Could not load words from the database.",
         });
     }
-  }, [toast]);
+  }, [toast, difficultyFilter]);
 
   useEffect(() => {
     fetchWords();
@@ -150,11 +158,14 @@ export function WordsClientPage() {
         });
     }
   }
+  
+  const pageTitle = difficultyFilter ? `${difficultyFilter} Words` : 'Vocabulary';
+  const pageDescription = difficultyFilter ? `A list of all words marked as ${difficultyFilter.toLowerCase()}.` : 'Manage your collection of words.';
 
   return (
     <PageTemplate
-      title="Vocabulary"
-      description="Manage your collection of words."
+      title={pageTitle}
+      description={pageDescription}
       actions={
         <>
           <Button size="sm" variant="outline" className="h-8 gap-1">
@@ -214,6 +225,18 @@ export function WordsClientPage() {
                 </Form>
             </DialogContent>
         </Dialog>
+        
+        {difficultyFilter && (
+            <div className="mb-4">
+                <Link href="/words" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground">
+                    <Button variant="outline" size="sm" className="h-7 gap-1">
+                        <X className="h-3.5 w-3.5" />
+                        Clear filter
+                    </Button>
+                </Link>
+            </div>
+        )}
+        
         <Table>
             <TableHeader>
                 <TableRow>
@@ -237,10 +260,18 @@ export function WordsClientPage() {
                         </TableCell>
                     </TableRow>
                 )) : (
-                    <TableRow><TableCell colSpan={5} className="text-center h-24">No words added yet.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-center h-24">No words found for this filter.</TableCell></TableRow>
                 )}
             </TableBody>
         </Table>
     </PageTemplate>
   );
+}
+
+export function WordsClientPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <WordsClientContent />
+        </Suspense>
+    )
 }
