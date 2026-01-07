@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Word } from '@/lib/types';
-import { getWordsForQuiz, getAllWords } from '@/lib/db';
+import { getAllWords } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 
 interface McqEnBnQuizProps {
