@@ -1,8 +1,9 @@
+
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { notFound, useParams, useRouter } from 'next/navigation';
 import { getWord, getAllWords } from '@/lib/db';
-import type { Word, VerbFormDetail } from '@/lib/types';
+import type { Word, VerbFormDetail, Synonym, Antonym } from '@/lib/types';
 import { PageTemplate } from '@/components/page-template';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,13 +30,59 @@ function DetailCard({ title, children }: { title: string; children: React.ReactN
   );
 }
 
-const VerbFormRow = ({ label, data }: { label: string, data?: VerbFormDetail }) => {
+export default function WordDetailsPage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  
+  const [word, setWord] = useState<Word | null>(null);
+  const [allWordIds, setAllWordIds] = useState<string[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(-1);
+  const [loading, setLoading] = useState(true);
+  const [isPlaying, setIsPlaying] = useState<string | null>(null);
+
+  // Pronunciation settings state
+  const [accent, setAccent] = useState<'US' | 'UK'>('US');
+  const [speed, setSpeed] = useState([1]);
+  const [volume, setVolume] = useState([1]);
+
+
+  const handlePlayAudio = async (textToSpeak: string) => {
+    if (isPlaying === textToSpeak) return;
+    setIsPlaying(textToSpeak);
+    try {
+        const audioData = await speak({
+            text: textToSpeak,
+            accent: accent,
+            speed: speed[0],
+            volume: volume[0]
+        });
+        if (audioData) {
+            const audio = new Audio(audioData);
+            audio.play();
+            audio.onended = () => setIsPlaying(null);
+        } else {
+            setIsPlaying(null);
+        }
+    } catch (error) {
+        console.error("Failed to play audio:", error);
+        setIsPlaying(null);
+    }
+  };
+
+  const VerbFormRow = ({ label, data }: { label: string, data?: VerbFormDetail }) => {
     if (!data || !data.word) return null;
     return (
         <div className="grid grid-cols-4 gap-4 py-4 border-b">
             <div className="font-medium text-muted-foreground">{label}</div>
             <div className="col-span-1">
-                <p className="font-semibold">{data.word} <Volume2 className="inline h-4 w-4 text-muted-foreground" /></p>
+                <p 
+                    className="font-semibold cursor-pointer flex items-center gap-2"
+                    onClick={() => handlePlayAudio(data.word!)}
+                >
+                    {data.word} 
+                    <Volume2 className={`inline h-4 w-4 text-muted-foreground ${isPlaying === data.word ? 'animate-pulse' : ''}`} />
+                </p>
                 <p className="text-sm text-muted-foreground">{data.pronunciation}</p>
             </div>
             <div className="col-span-1">
@@ -48,46 +95,22 @@ const VerbFormRow = ({ label, data }: { label: string, data?: VerbFormDetail }) 
     );
 };
 
+const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
+    const word = typeof item === 'string' ? item : item.word;
+    const bangla = typeof item !== 'string' ? item.bangla : undefined;
 
-export default function WordDetailsPage() {
-  const params = useParams();
-  const router = useRouter();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id;
-  
-  const [word, setWord] = useState<Word | null>(null);
-  const [allWordIds, setAllWordIds] = useState<string[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(-1);
-  const [loading, setLoading] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  // Pronunciation settings state
-  const [accent, setAccent] = useState<'US' | 'UK'>('US');
-  const [speed, setSpeed] = useState([1]);
-  const [volume, setVolume] = useState([1]);
-
-
-  const handlePlayAudio = async () => {
-    if (!word || isPlaying) return;
-    setIsPlaying(true);
-    try {
-        const audioData = await speak({
-            text: word.word,
-            accent: accent,
-            speed: speed[0],
-            volume: volume[0]
-        });
-        if (audioData) {
-            const audio = new Audio(audioData);
-            audio.play();
-            audio.onended = () => setIsPlaying(false);
-        } else {
-            setIsPlaying(false);
-        }
-    } catch (error) {
-        console.error("Failed to play audio:", error);
-        setIsPlaying(false);
-    }
-  };
+    return (
+        <Badge 
+            variant="secondary" 
+            className="text-base px-3 py-1 cursor-pointer flex items-center gap-2"
+            onClick={() => handlePlayAudio(word)}
+        >
+            <span>{word}</span>
+            {bangla && <span className="text-sm text-muted-foreground">({bangla})</span>}
+            <Volume2 className={`inline h-4 w-4 ${isPlaying === word ? 'animate-pulse' : ''}`} />
+        </Badge>
+    );
+};
 
 
   const fetchWordData = useCallback(async () => {
@@ -159,7 +182,6 @@ export default function WordDetailsPage() {
   }
 
   if (!word) {
-    // This case should be handled by notFound(), but as a fallback:
     return null;
   }
 
@@ -174,8 +196,8 @@ export default function WordDetailsPage() {
                     <p className="text-xl text-muted-foreground">{word.partOfSpeech}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" onClick={handlePlayAudio} disabled={isPlaying}>
-                        <Volume2 className={isPlaying ? 'animate-pulse' : ''} />
+                    <Button variant="outline" size="icon" onClick={() => handlePlayAudio(word.word)} disabled={isPlaying === word.word}>
+                        <Volume2 className={isPlaying === word.word ? 'animate-pulse' : ''} />
                     </Button>
                     <Popover>
                         <PopoverTrigger asChild>
@@ -251,6 +273,23 @@ export default function WordDetailsPage() {
                 <DetailCard title="Usage Distinction">
                      <p className="text-lg text-muted-foreground">"{word.usageDistinction}"</p>
                 </DetailCard>
+                
+                {word.synonyms && word.synonyms.length > 0 && (
+                    <DetailCard title="Synonyms">
+                        <div className="flex flex-wrap gap-2">
+                            {word.synonyms.map((item, i) => <SynonymAntonymItem key={i} item={item} />)}
+                        </div>
+                    </DetailCard>
+                )}
+
+                {word.antonyms && word.antonyms.length > 0 && (
+                    <DetailCard title="Antonyms">
+                         <div className="flex flex-wrap gap-2">
+                            {word.antonyms.map((item, i) => <SynonymAntonymItem key={i} item={item} />)}
+                        </div>
+                    </DetailCard>
+                )}
+
 
                 <DetailCard title="Syllables">
                     <p className="font-mono text-lg">{word.syllables?.join(' / ')}</p>
@@ -293,3 +332,5 @@ export default function WordDetailsPage() {
     </PageTemplate>
   );
 }
+
+    
