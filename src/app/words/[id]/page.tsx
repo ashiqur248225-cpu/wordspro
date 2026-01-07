@@ -9,6 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, ArrowRight, Volume2, Settings } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Slider } from '@/components/ui/slider';
+import { speak } from '@/ai/flows/tts-flow';
 
 function DetailCard({ title, children }: { title: string; children: React.ReactNode }) {
   if (!children) return null;
@@ -53,6 +58,37 @@ export default function WordDetailsPage() {
   const [allWordIds, setAllWordIds] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [loading, setLoading] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // Pronunciation settings state
+  const [accent, setAccent] = useState<'US' | 'UK'>('US');
+  const [speed, setSpeed] = useState([1]);
+  const [volume, setVolume] = useState([1]);
+
+
+  const handlePlayAudio = async () => {
+    if (!word || isPlaying) return;
+    setIsPlaying(true);
+    try {
+        const audioData = await speak({
+            text: word.word,
+            accent: accent,
+            speed: speed[0],
+            volume: volume[0]
+        });
+        if (audioData) {
+            const audio = new Audio(audioData);
+            audio.play();
+            audio.onended = () => setIsPlaying(false);
+        } else {
+            setIsPlaying(false);
+        }
+    } catch (error) {
+        console.error("Failed to play audio:", error);
+        setIsPlaying(false);
+    }
+  };
+
 
   const fetchWordData = useCallback(async () => {
     setLoading(true);
@@ -61,6 +97,7 @@ export default function WordDetailsPage() {
             const fetchedWord = await getWord(id);
             if (!fetchedWord) {
                 notFound();
+                return;
             }
             setWord(fetchedWord);
         } catch(e) {
@@ -137,9 +174,68 @@ export default function WordDetailsPage() {
                     <p className="text-xl text-muted-foreground">{word.partOfSpeech}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon"><Volume2 /></Button>
-                    <Button variant="outline" size="icon"><Settings /></Button>
-                    <Badge variant={word.difficulty === 'Hard' ? 'destructive' : 'secondary'} className="text-base px-4 py-1">{word.difficulty}</Badge>
+                    <Button variant="outline" size="icon" onClick={handlePlayAudio} disabled={isPlaying}>
+                        <Volume2 className={isPlaying ? 'animate-pulse' : ''} />
+                    </Button>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" size="icon"><Settings /></Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80">
+                            <div className="grid gap-4">
+                                <div className="space-y-2">
+                                    <h4 className="font-medium leading-none">Pronunciation Control</h4>
+                                    <p className="text-sm text-muted-foreground">
+                                        Adjust accent, speed, and volume.
+                                    </p>
+                                </div>
+                                <div className="grid gap-2">
+                                    <div className="grid grid-cols-3 items-center gap-4">
+                                        <Label htmlFor="accent">Accent</Label>
+                                        <RadioGroup
+                                            defaultValue={accent}
+                                            onValueChange={(value: 'US' | 'UK') => setAccent(value)}
+                                            className="col-span-2 flex items-center"
+                                        >
+                                            <div className="flex items-center space-x-2">
+                                                <RadioGroupItem value="US" id="us-accent" />
+                                                <Label htmlFor="us-accent">US</Label>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <RadioGroupItem value="UK" id="uk-accent" />
+                                                <Label htmlFor="uk-accent">UK</Label>
+                                            </div>
+                                        </RadioGroup>
+                                    </div>
+                                    <div className="grid grid-cols-3 items-center gap-4">
+                                        <Label htmlFor="speed">Speed</Label>
+                                        <Slider
+                                            id="speed"
+                                            min={0.5}
+                                            max={1.5}
+                                            step={0.1}
+                                            defaultValue={speed}
+                                            onValueChange={setSpeed}
+                                            className="col-span-2"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-3 items-center gap-4">
+                                        <Label htmlFor="volume">Volume</Label>
+                                        <Slider
+                                            id="volume"
+                                            min={0}
+                                            max={1}
+                                            step={0.1}
+                                            defaultValue={volume}
+                                            onValueChange={setVolume}
+                                            className="col-span-2"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                    <Badge variant={word.difficulty === 'Hard' ? 'destructive' : word.difficulty === 'New' ? 'outline' : 'secondary'} className="text-base px-4 py-1">{word.difficulty}</Badge>
                 </div>
             </div>
 
