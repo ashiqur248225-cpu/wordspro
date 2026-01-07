@@ -105,7 +105,7 @@ const bulkImportWordSchema = z.object({
 });
 const bulkImportSchema = z.array(bulkImportWordSchema);
 
-type FilterType = WordDifficulty | "Today's" | "Learned";
+type FilterType = "Today's" | "Learned" | WordDifficulty;
 
 const quizTypes = [
     { id: 'mcq-en-bn', label: 'MCQ (English to Bengali)' },
@@ -628,3 +628,5 @@ export function WordsClientPage() {
         </Suspense>
     )
 }
+
+    
