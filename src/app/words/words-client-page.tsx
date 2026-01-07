@@ -100,8 +100,8 @@ const bulkImportWordSchema = z.object({
   usage_distinction: z.string().optional(),
   example_sentences: z.array(z.string()).optional(),
   verb_forms: verbFormsSchema.nullable().optional(),
-  synonyms: z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])).optional(),
-  antonyms: z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])).optional(),
+  synonyms: z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])).nullable().optional(),
+  antonyms: z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])).nullable().optional(),
 });
 const bulkImportSchema = z.array(bulkImportWordSchema);
 
@@ -595,7 +595,3 @@ export function WordsClientPage() {
         </Suspense>
     )
 }
-
-    
-
-    
