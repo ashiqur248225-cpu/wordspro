@@ -99,7 +99,7 @@ const bulkImportWordSchema = z.object({
   syllables: z.array(z.string()).optional(),
   usage_distinction: z.string().optional(),
   example_sentences: z.array(z.string()).optional(),
-  verb_forms: verbFormsSchema.nullable().optional(),
+  verb_forms: verbFormsSchema.nullable(),
   synonyms: z.union([z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])), z.null()]).optional(),
   antonyms: z.union([z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])), z.null()]).optional(),
 });
@@ -297,6 +297,8 @@ function WordsClientContent() {
         const wordsToInsert = parsedData.map(w => ({
             ...w,
             partOfSpeech: w.parts_of_speech,
+            usageDistinction: w.usage_distinction,
+            exampleSentences: w.example_sentences,
         }));
 
         const result = await bulkAddWords(wordsToInsert);
@@ -348,7 +350,6 @@ function WordsClientContent() {
   const pageDescription = initialDifficultyFilter ? `A list of all words marked as ${initialDifficultyFilter.toLowerCase()}.` : 'Manage your collection of words.';
 
   const activeFilterCount = (difficultyFilter !== 'All' ? 1 : 0) + (posFilter !== 'All' ? 1 : 0);
-  const hasActiveFilters = activeFilterCount > 0 || searchTerm !== '';
 
   const isVerb = form.watch('partOfSpeech') === 'verb';
   
@@ -566,7 +567,7 @@ function WordsClientContent() {
                 )) : (
                     <TableRow>
                         <TableCell colSpan={5} className="text-center h-24">
-                           {hasActiveFilters ? 'No words match your filters.' : 'No words added yet.'}
+                           {activeFilterCount > 0 ? 'No words match your filters.' : 'No words added yet.'}
                         </TableCell>
                     </TableRow>
                 )}

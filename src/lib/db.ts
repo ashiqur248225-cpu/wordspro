@@ -76,7 +76,7 @@ export async function addWord(word: Omit<Word, 'id' | 'createdAt' | 'updatedAt'>
     } as Word);
 }
 
-export async function bulkAddWords(words: Omit<Word, 'id' | 'createdAt' | 'updatedAt'>[]) {
+export async function bulkAddWords(words: any[]) {
     const db = await getDbInstance();
     if (!db) return { successCount: 0, errorCount: 0, errors: [] };
 
