@@ -66,6 +66,10 @@ export default function WordDetailsPage() {
     // Cancel any ongoing speech
     if (window.speechSynthesis.speaking) {
         window.speechSynthesis.cancel();
+        if (isPlaying === textToSpeak) {
+          setIsPlaying(null);
+          return;
+        }
     }
     
     setIsPlaying(textToSpeak);
@@ -103,7 +107,7 @@ export default function WordDetailsPage() {
                     onClick={() => handlePlayAudio(data.word!)}
                 >
                     {data.word} 
-                    <Volume2 className={`inline h-4 w-4 text-muted-foreground ${isPlaying === data.word ? 'animate-pulse' : ''}`} />
+                    <Volume2 className={`inline h-4 w-4 text-muted-foreground ${isPlaying === data.word ? 'animate-pulse text-primary' : ''}`} />
                 </p>
                 <p className="text-sm text-muted-foreground">{data.pronunciation}</p>
             </div>
@@ -111,7 +115,7 @@ export default function WordDetailsPage() {
                 <p>{data.bangla_meaning}</p>
             </div>
             <div className="col-span-1">
-                <p className="text-sm text-muted-foreground">{data.usage_timing}</p>
+                 {data.usage_timing && <p className="text-sm text-muted-foreground">{data.usage_timing}</p>}
             </div>
         </div>
     );
@@ -129,7 +133,7 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
         >
             <span>{word}</span>
             {bangla && <span className="text-sm text-muted-foreground">({bangla})</span>}
-            <Volume2 className={`inline h-4 w-4 ${isPlaying === word ? 'animate-pulse' : ''}`} />
+            <Volume2 className={`inline h-4 w-4 text-muted-foreground ${isPlaying === word ? 'animate-pulse text-primary' : ''}`} />
         </Badge>
     );
 };
@@ -219,7 +223,7 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="icon" onClick={() => handlePlayAudio(word.word)} disabled={!!isPlaying}>
-                        <Volume2 className={isPlaying === word.word ? 'animate-pulse' : ''} />
+                        <Volume2 className={isPlaying === word.word ? 'animate-pulse text-primary' : ''} />
                     </Button>
                     <Popover>
                         <PopoverTrigger asChild>
@@ -288,13 +292,17 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
                     <p className="text-2xl">{word.meaning}</p>
                 </DetailCard>
 
-                <DetailCard title="Meaning Explanation">
-                    <p className="text-lg text-muted-foreground">"{word.meaning_explanation}"</p>
-                </DetailCard>
+                {word.meaning_explanation && (
+                  <DetailCard title="Meaning Explanation">
+                      <p className="text-lg text-muted-foreground">"{word.meaning_explanation}"</p>
+                  </DetailCard>
+                )}
 
-                <DetailCard title="Usage Distinction">
-                     <p className="text-lg text-muted-foreground">"{word.usageDistinction}"</p>
-                </DetailCard>
+                {word.usageDistinction && (
+                  <DetailCard title="Usage Distinction">
+                      <p className="text-lg text-muted-foreground">"{word.usageDistinction}"</p>
+                  </DetailCard>
+                )}
                 
                 {word.synonyms && word.synonyms.length > 0 && (
                     <DetailCard title="Synonyms">
@@ -312,16 +320,19 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
                     </DetailCard>
                 )}
 
-
-                <DetailCard title="Syllables">
-                    <p className="font-mono text-lg">{word.syllables?.join(' / ')}</p>
-                </DetailCard>
+                {word.syllables && word.syllables.length > 0 && (
+                  <DetailCard title="Syllables">
+                      <p className="font-mono text-lg">{word.syllables?.join(' / ')}</p>
+                  </DetailCard>
+                )}
                 
-                <DetailCard title="Example Sentences">
-                    <ul className="list-disc list-inside space-y-2">
-                        {word.exampleSentences?.map((sentence, i) => <li key={i} className="text-lg">"{sentence}"</li>)}
-                    </ul>
-                </DetailCard>
+                {word.exampleSentences && word.exampleSentences.length > 0 && (
+                  <DetailCard title="Example Sentences">
+                      <ul className="list-disc list-inside space-y-2">
+                          {word.exampleSentences?.map((sentence, i) => <li key={i} className="text-lg">"{sentence}"</li>)}
+                      </ul>
+                  </DetailCard>
+                )}
 
                 {hasVerbForms && (
                     <DetailCard title="Verb Forms">
@@ -334,9 +345,9 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
                 {word.verb_forms?.form_examples && (
                      <DetailCard title="Form Examples">
                         <div className="space-y-2 text-lg">
-                           <p><span className="font-bold">V1:</span> "{word.verb_forms.form_examples.v1}"</p>
-                           <p><span className="font-bold">V2:</span> "{word.verb_forms.form_examples.v2}"</p>
-                           <p><span className="font-bold">V3:</span> "{word.verb_forms.form_examples.v3}"</p>
+                           {word.verb_forms.form_examples.v1 && <p><span className="font-bold">V1:</span> "{word.verb_forms.form_examples.v1}"</p>}
+                           {word.verb_forms.form_examples.v2 && <p><span className="font-bold">V2:</span> "{word.verb_forms.form_examples.v2}"</p>}
+                           {word.verb_forms.form_examples.v3 && <p><span className="font-bold">V3:</span> "{word.verb_forms.form_examples.v3}"</p>}
                         </div>
                     </DetailCard>
                 )}
