@@ -115,7 +115,6 @@ const quizTypes = [
 
 
 function WordsClientContent() {
-  const [isClient, setIsClient] = useState(false);
   const [allWords, setAllWords] = useState<Word[]>([]);
   const [filteredWords, setFilteredWords] = useState<Word[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -133,10 +132,6 @@ function WordsClientContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialDifficultyFilter = searchParams.get('difficulty') as WordDifficulty | null;
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   const fetchWords = useCallback(async () => {
     try {
@@ -358,11 +353,8 @@ function WordsClientContent() {
 
   const isVerb = form.watch('partOfSpeech') === 'verb';
 
-  if (!isClient) {
-    return null;
-  }
-
   return (
+    <Suspense fallback={<div>Loading Words...</div>}>
     <PageTemplate
       title={pageTitle}
       description={pageDescription}
@@ -546,6 +538,7 @@ function WordsClientContent() {
                     setSearchTerm('');
                     setDifficultyFilter('All');
                     setPosFilter('All');
+                    router.push('/words');
                 }}>
                     <X className="h-3.5 w-3.5" />
                     Clear Filters
@@ -585,13 +578,18 @@ function WordsClientContent() {
             </TableBody>
         </Table>
     </PageTemplate>
+    </Suspense>
   );
 }
 
 export function WordsClientPage() {
+    // This outer component ensures Suspense can be used.
+    // The actual client logic is in WordsClientContent.
     return (
         <Suspense fallback={<div>Loading...</div>}>
             <WordsClientContent />
         </Suspense>
     )
 }
+
+    
