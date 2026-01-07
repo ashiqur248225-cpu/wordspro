@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Menu, LayoutDashboard, BookText, BrainCircuit, Notebook } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Logo } from '@/components/icons';
 
 const navItems = [
@@ -23,6 +23,9 @@ export function MobileNav() {
         </Button>
       </SheetTrigger>
       <SheetContent side="left">
+        <SheetHeader>
+          <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+        </SheetHeader>
         <nav className="grid gap-6 text-lg font-medium">
           <Link
             href="#"
