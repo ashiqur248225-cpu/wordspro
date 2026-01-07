@@ -59,15 +59,17 @@ export default function WordDetailsPage() {
     if (id) {
         try {
             const fetchedWord = await getWord(id);
-            if (fetchedWord) {
-                setWord(fetchedWord);
-            } else {
-                setWord(null); // Explicitly handle not found case
+            if (!fetchedWord) {
+                notFound();
             }
+            setWord(fetchedWord);
         } catch(e) {
             console.error(e);
             setWord(null);
+            notFound();
         }
+    } else {
+        notFound();
     }
   }, [id]);
 
@@ -120,8 +122,8 @@ export default function WordDetailsPage() {
   }
 
   if (!word) {
-    notFound();
-    return null; // Keep TypeScript happy
+    // This case should be handled by notFound(), but as a fallback:
+    return null;
   }
 
   const hasVerbForms = word.verb_forms && (word.verb_forms.v1_present?.word || word.verb_forms.v2_past?.word || word.verb_forms.v3_past_participle?.word);
