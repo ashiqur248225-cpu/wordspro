@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { getAllWords } from '@/lib/db';
 import type { Word } from '@/lib/types';
-import { ChartTooltipContent } from '@/components/ui/chart';
+import { ChartTooltipContent, ChartContainer } from '@/components/ui/chart';
 
 export function ProgressChart() {
     const [chartData, setChartData] = useState([
@@ -35,29 +35,49 @@ export function ProgressChart() {
         fetchData();
     }, []);
 
+    const chartConfig = {
+        count: {
+            label: "Words",
+        },
+        New: {
+            color: 'hsl(var(--chart-3))'
+        },
+        Easy: {
+            color: 'hsl(var(--chart-2))'
+        },
+        Medium: {
+            color: 'hsl(var(--chart-4))'
+        },
+        Hard: {
+            color: 'hsl(var(--chart-5))'
+        },
+    };
+
     return (
-        <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={chartData}>
-                <XAxis
-                    dataKey="name"
-                    stroke="#888888"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                />
-                <YAxis
-                    stroke="#888888"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(value) => `${value}`}
-                />
-                <Tooltip
-                    cursor={{fill: 'hsl(var(--muted))'}}
-                    content={<ChartTooltipContent />}
-                />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]} />
-            </BarChart>
-        </ResponsiveContainer>
+        <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+            <ResponsiveContainer width="100%" height={350}>
+                <BarChart data={chartData}>
+                    <XAxis
+                        dataKey="name"
+                        stroke="#888888"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                    />
+                    <YAxis
+                        stroke="#888888"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `${value}`}
+                    />
+                    <Tooltip
+                        cursor={{fill: 'hsl(var(--muted))'}}
+                        content={<ChartTooltipContent />}
+                    />
+                    <Bar dataKey="count" radius={[4, 4, 0, 0]} />
+                </BarChart>
+            </ResponsiveContainer>
+        </ChartContainer>
     );
 }
