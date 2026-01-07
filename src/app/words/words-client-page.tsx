@@ -102,7 +102,7 @@ const bulkImportWordSchema = z.object({
 });
 const bulkImportSchema = z.array(bulkImportWordSchema);
 
-type FilterType = WordDifficulty | 'Added Today';
+type FilterType = WordDifficulty | "Today's";
 
 function WordsClientContent() {
   const [isClient, setIsClient] = useState(false);
@@ -145,7 +145,7 @@ function WordsClientContent() {
   useEffect(() => {
     if (initialDifficultyFilter && ['Easy', 'Medium', 'Hard', 'New'].includes(initialDifficultyFilter)) {
         if (initialDifficultyFilter === 'New') {
-            setDifficultyFilters(new Set(['Added Today']));
+            setDifficultyFilters(new Set(["Today's"]));
         } else {
             setDifficultyFilters(new Set([initialDifficultyFilter]));
         }
@@ -165,7 +165,7 @@ function WordsClientContent() {
     if (difficultyFilters.size > 0) {
         const today = new Date().toDateString();
         words = words.filter(word => {
-            if (difficultyFilters.has('Added Today')) {
+            if (difficultyFilters.has("Today's")) {
                 if (new Date(word.createdAt).toDateString() === today) return true;
             }
             return difficultyFilters.has(word.difficulty);
@@ -480,7 +480,7 @@ function WordsClientContent() {
                 <DropdownMenuContent align="end" className="w-[200px]">
                     <DropdownMenuLabel>Filter by Difficulty</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {(['Added Today', 'Easy', 'Medium', 'Hard'] as FilterType[]).map(d => (
+                    {(["Today's", 'Easy', 'Medium', 'Hard'] as FilterType[]).map(d => (
                         <DropdownMenuCheckboxItem
                             key={d}
                             checked={difficultyFilters.has(d)}
@@ -558,3 +558,5 @@ export function WordsClientPage() {
         </Suspense>
     )
 }
+
+    
