@@ -104,6 +104,7 @@ const bulkImportSchema = z.array(bulkImportWordSchema);
 
 
 function WordsClientContent() {
+  const [isClient, setIsClient] = useState(false);
   const [allWords, setAllWords] = useState<Word[]>([]);
   const [filteredWords, setFilteredWords] = useState<Word[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -118,6 +119,10 @@ function WordsClientContent() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const initialDifficultyFilter = searchParams.get('difficulty') as WordDifficulty | null;
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const fetchWords = useCallback(async () => {
     try {
@@ -324,6 +329,10 @@ function WordsClientContent() {
   const hasActiveFilters = difficultyFilters.size > 0 || posFilters.size > 0 || searchTerm !== '';
 
   const isVerb = form.watch('partOfSpeech') === 'verb';
+
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <PageTemplate
