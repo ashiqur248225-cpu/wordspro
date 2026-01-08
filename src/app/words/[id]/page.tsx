@@ -89,7 +89,9 @@ export default function WordDetailsPage() {
         setIsPlaying(null);
     };
     utterance.onerror = (event) => {
-        console.error('Speech synthesis error:', event.error);
+        if (event.error !== 'interrupted') {
+          console.error('Speech synthesis error:', event.error);
+        }
         setIsPlaying(null);
     };
 
