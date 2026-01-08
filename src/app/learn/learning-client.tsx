@@ -55,8 +55,18 @@ function LearningClientInternal() {
     const [fallbackMessage, setFallbackMessage] = useState<string | null>(null);
     const [wordCounts, setWordCounts] = useState<WordCounts | null>(null);
 
-    const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>(initialDifficulty || 'Hard');
-    const [examType, setExamType] = useState<ExamType>(initialExamType || 'dynamic');
+    const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('Hard');
+    const [examType, setExamType] = useState<ExamType>('dynamic');
+    
+    useEffect(() => {
+        if (initialDifficulty) {
+            setDifficultyFilter(initialDifficulty);
+        }
+        if (initialExamType) {
+            setExamType(initialExamType);
+        }
+    }, [initialDifficulty, initialExamType]);
+
 
     const getNextWord = useCallback((wordList: Word[], currentTestedIds: Set<string>): Word | null => {
         const availableWords = wordList.filter(w => !currentTestedIds.has(w.id));
