@@ -159,22 +159,22 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
     }
   }, [id]);
 
-  const fetchAllWordIds = useCallback(async () => {
-    try {
-        const allWords = await getAllWords();
-        // Sorting by creation date to have a consistent order
-        const sortedWords = allWords.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-        const ids = sortedWords.map(w => w.id);
-        setAllWordIds(ids);
-    } catch(e) {
-        console.error("Could not fetch word list for navigation", e);
-    }
-  }, []);
-
   useEffect(() => {
+    const fetchAllWordIds = async () => {
+        try {
+            const allWords = await getAllWords();
+            // Sorting by creation date to have a consistent order
+            const sortedWords = allWords.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            const ids = sortedWords.map(w => w.id);
+            setAllWordIds(ids);
+        } catch(e) {
+            console.error("Could not fetch word list for navigation", e);
+        }
+    };
+
     fetchWordData();
     fetchAllWordIds();
-  }, [id, fetchWordData, fetchAllWordIds]);
+  }, [id, fetchWordData]);
 
   useEffect(() => {
     if (word && allWordIds.length > 0) {
