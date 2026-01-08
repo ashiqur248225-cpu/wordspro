@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
+  DialogDescription
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -19,7 +20,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import type { Note } from '@/lib/types';
-import { addNote, getAllNotes, deleteNote, updateNote } from '@/lib/db';
+import { addNote, getAllNotes, deleteNote, updateNote, bulkAddNotes } from '@/lib/db';
 import { useToast } from '@/hooks/use-toast';
 
 const noteSchema = z.object({
@@ -30,10 +31,20 @@ const noteSchema = z.object({
 
 type NoteFormData = z.infer<typeof noteSchema>;
 
+const bulkImportNoteSchema = z.object({
+  title: z.string(),
+  content: z.string(),
+  category: z.string().optional(),
+});
+const bulkImportSchema = z.array(bulkImportNoteSchema);
+
+
 export function NotesClientPage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [importJson, setImportJson] = useState('');
   const { toast } = useToast();
 
   const fetchNotes = useCallback(async () => {
@@ -106,13 +117,50 @@ export function NotesClientPage() {
     }
   }
 
+  const handleBulkImport = async () => {
+    try {
+        const jsonData = JSON.parse(importJson);
+        const parsedData = bulkImportSchema.parse(jsonData);
+        
+        const result = await bulkAddNotes(parsedData);
+        
+        toast({
+            title: 'Bulk Import Complete',
+            description: `${result.successCount} notes imported successfully. ${result.errorCount} failed.`,
+        });
+
+        if (result.errorCount > 0) {
+            console.error('Import errors:', result.errors);
+        }
+
+        await fetchNotes();
+        setIsImportOpen(false);
+        setImportJson('');
+
+    } catch (error: any) {
+        let description = "An unknown error occurred.";
+        if (error instanceof z.ZodError) {
+            description = "JSON data does not match the required format. Check console for details.";
+            console.error(error.errors);
+        } else if (error instanceof SyntaxError) {
+            description = "Invalid JSON format. Please check your syntax.";
+        }
+        toast({
+            variant: 'destructive',
+            title: 'Import Failed',
+            description: description,
+        });
+    }
+  };
+
+
   return (
     <PageTemplate
       title="Notes"
       description=""
       actions={
         <>
-          <Button size="sm" variant="outline" className="h-8 gap-1">
+          <Button size="sm" variant="outline" className="h-8 gap-1" onClick={() => setIsImportOpen(true)}>
             <Upload className="h-3.5 w-3.5" />
             <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Import</span>
           </Button>
@@ -147,6 +195,30 @@ export function NotesClientPage() {
           </Form>
         </DialogContent>
       </Dialog>
+      <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+          <DialogContent className="sm:max-w-[625px]">
+              <DialogHeader>
+                  <DialogTitle>Bulk Import Notes</DialogTitle>
+                  <DialogDescription>
+                      Paste a JSON array of notes to import them in bulk. See example format below.
+                  </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                  <Textarea 
+                      placeholder={'[\n  {\n    "title": "Note Title 1",\n    "content": "Content for note 1.",\n    "category": "General"\n  },\n  {\n    "title": "Note Title 2",\n    "content": "Content for note 2."\n  }\n]'}
+                      value={importJson}
+                      onChange={(e) => setImportJson(e.target.value)}
+                      rows={15}
+                      className="font-mono text-xs"
+                  />
+              </div>
+              <DialogFooter>
+                  <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
+                  <Button type="button" onClick={handleBulkImport}>Import Notes</Button>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {notes.length > 0 ? notes.map((note) => (
           <Card key={note.id}>

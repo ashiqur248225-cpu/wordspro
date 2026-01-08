@@ -12,6 +12,7 @@ interface WordProDB extends DBSchema {
   notes: {
     key: number;
     value: Note;
+    indexes: { 'category': string };
   };
 }
 
@@ -23,7 +24,7 @@ const getDbInstance = () => {
     return null;
   }
   if (!dbPromise) {
-    dbPromise = openDB<WordProDB>('WordProDB', 2, { // Bumped version to 2
+    dbPromise = openDB<WordProDB>('WordProDB', 3, { // Bumped version to 3
       upgrade(db, oldVersion, newVersion, transaction) {
         if (oldVersion < 1) {
             // Initial schema
@@ -51,6 +52,13 @@ const getDbInstance = () => {
             });
             store.createIndex('difficulty', 'difficulty');
             store.createIndex('word', 'word', { unique: true });
+        }
+         if (oldVersion < 3) {
+            // Add category index to notes
+            const notesStore = transaction.objectStore('notes');
+            if (!notesStore.indexNames.contains('category')) {
+                notesStore.createIndex('category', 'category');
+            }
         }
       },
     });
@@ -181,6 +189,34 @@ export async function addNote(note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>
         updatedAt: now 
     } as any);
 }
+
+export async function bulkAddNotes(notes: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>[]) {
+    const db = await getDbInstance();
+    if (!db) return { successCount: 0, errorCount: 0, errors: [] };
+
+    const tx = db.transaction('notes', 'readwrite');
+    let successCount = 0;
+    let errorCount = 0;
+    const errors: { title: string, error: string }[] = [];
+    const now = new Date().toISOString();
+
+    for (const note of notes) {
+        try {
+             await tx.store.add({
+                ...note,
+                createdAt: now,
+                updatedAt: now,
+            } as any);
+            successCount++;
+        } catch (e: any) {
+            errorCount++;
+            errors.push({ title: note.title, error: e.message || 'Unknown error' });
+        }
+    }
+    await tx.done;
+    return { successCount, errorCount, errors };
+}
+
 
 export async function getAllNotes() {
     const db = await getDbInstance();
