@@ -1,7 +1,6 @@
 'use client';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { MobileNav } from '@/components/mobile-nav';
 
 export default function RootLayout({
   children,
@@ -27,10 +26,6 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <div className="flex min-h-screen w-full flex-col">
-          <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 justify-between md:hidden">
-            <MobileNav />
-            {/* The title is now handled in nested layouts */}
-          </header>
           <main className="flex-1">{children}</main>
         </div>
         <Toaster />
