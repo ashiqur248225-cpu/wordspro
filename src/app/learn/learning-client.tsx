@@ -43,7 +43,6 @@ export function LearningClient() {
     useEffect(() => {
         const selectWords = async () => {
             setState('loading');
-            setTestedWordIds(new Set()); // Reset tested words for new session
             let words: Word[] = [];
             const today = new Date().toDateString();
     
@@ -82,6 +81,7 @@ export function LearningClient() {
                 return wordList[0];
             };
             
+            setTestedWordIds(new Set());
             const initialWord = getNextWord(words);
     
             setWordQueue(words);
@@ -107,7 +107,7 @@ export function LearningClient() {
              }
              if (examType === 'fill-blanks' && (!word.exampleSentences || word.exampleSentences.length === 0)) {
                 setFallbackMessage("This word doesn't have an example sentence. Switching to MCQ test.");
-                return 'mcq-en-bn';
+                return 'mcq-bn-en';
              }
              return examType;
         }
