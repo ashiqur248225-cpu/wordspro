@@ -40,7 +40,7 @@ export default function RootLayout({
               <MobileNav />
             </div>
              <div className="flex-1 text-center">
-              <h1 className="text-lg font-semibold">{pageTitle}</h1>
+              {/* <h1 className="text-lg font-semibold">{pageTitle}</h1> */}
             </div>
             <div className="w-10"></div>
           </header>
