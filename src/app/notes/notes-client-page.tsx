@@ -109,7 +109,7 @@ export function NotesClientPage() {
   return (
     <PageTemplate
       title="Notes"
-      description="Jot down grammar rules, thoughts, and ideas."
+      description=""
       actions={
         <>
           <Button size="sm" variant="outline" className="h-8 gap-1">
