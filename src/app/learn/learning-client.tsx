@@ -7,6 +7,7 @@ import type { Word, WordDifficulty } from '@/lib/types';
 import { McqEnBnQuiz } from '../quiz/mcq-en-bn';
 import { McqBnEnQuiz } from '../quiz/mcq-bn-en';
 import { SpellingQuiz } from '../quiz/spelling-quiz';
+import { FillBlanksQuiz } from '../quiz/fill-in-the-blanks-quiz';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle } from 'lucide-react';
@@ -104,14 +105,18 @@ export function LearningClient() {
                  setFallbackMessage("This word is not a verb. Switching to MCQ test.");
                  return 'mcq-en-bn';
              }
+             if (examType === 'fill-blanks' && (!word.exampleSentences || word.exampleSentences.length === 0)) {
+                setFallbackMessage("This word doesn't have an example sentence. Switching to MCQ test.");
+                return 'mcq-en-bn';
+             }
              return examType;
         }
 
         // Dynamic Revision Logic
         if ((word.wrong_count?.spelling || 0) > 1) return 'spelling';
         if (word.partOfSpeech === 'verb' && word.verb_forms) return 'verb-form';
-        if (Math.random() > 0.5) return 'mcq-en-bn';
-        return 'mcq-bn-en'; // Default dynamic choice
+        if (Math.random() > 0.5) return 'mcq-bn-en';
+        return 'mcq-en-bn'; // Default dynamic choice
     }
 
     const handleAnswer = async ({ isCorrect, userAnswer, quizType }: { isCorrect: boolean; userAnswer: string; quizType: ExamType }) => {
@@ -137,7 +142,7 @@ export function LearningClient() {
                 newStats.wrong_count = { spelling: 0, meaning: 0 };
             }
 
-            if (quizType === 'spelling' || quizType === 'mcq-bn-en') {
+            if (quizType === 'spelling' || quizType === 'mcq-bn-en' || quizType === 'fill-blanks') {
                 newStats.wrong_count.spelling = (newStats.wrong_count.spelling || 0) + 1;
                 feedbackCorrectAnswer = currentWord.word;
             } else {
@@ -205,6 +210,10 @@ export function LearningClient() {
                     onAnswer={(isCorrect, userAnswer) => handleAnswer({ isCorrect, userAnswer, quizType: 'spelling' })}
                 />;
             case 'fill-blanks':
+                 return <FillBlanksQuiz
+                    word={currentWord}
+                    onAnswer={(isCorrect, userAnswer) => handleAnswer({ isCorrect, userAnswer, quizType: 'fill-blanks' })}
+                />;
             case 'verb-form':
             default:
                 return (
@@ -293,7 +302,7 @@ function LoadingState() {
 }
 
 function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, word: Word, onNext: () => void }) {
-    const isSpellingTest = feedback.quizType === 'spelling' || feedback.quizType === 'mcq-bn-en';
+    const isSpellingTest = feedback.quizType === 'spelling' || feedback.quizType === 'mcq-bn-en' || feedback.quizType === 'fill-blanks';
 
     const getFeedbackTitle = () => {
         if (isSpellingTest) return 'spelling for';
@@ -301,7 +310,11 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
     }
 
     const getFeedbackWord = () => {
-        if (isSpellingTest) return word.meaning;
+        if (isSpellingTest) {
+            // For BN to EN, the "word" is the meaning.
+            // For spelling and fill-blanks, it's the word itself, and we show the meaning.
+            return feedback.quizType === 'mcq-bn-en' ? word.meaning : word.word;
+        }
         return word.word;
     }
 
@@ -349,5 +362,7 @@ function FinishedState({ onRestart }: { onRestart: () => void }) {
         </div>
     )
 }
+
+    
 
     
