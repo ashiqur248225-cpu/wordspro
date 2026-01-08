@@ -42,8 +42,9 @@ export function LearningClient() {
     const [examType, setExamType] = useState<ExamType>('dynamic');
 
     useEffect(() => {
-        const selectWords = async () => {
+        async function fetchAndSetWords() {
             setState('loading');
+            setTestedWordIds(new Set());
             let words: Word[] = [];
             const today = new Date().toDateString();
     
@@ -59,7 +60,7 @@ export function LearningClient() {
                 words = await getWordsByDifficulty(['Hard', 'Medium']);
             }
             
-            // 2. Prioritization
+            // 2. Prioritization Logic (can be a standalone helper function if complex)
             const getNextWord = (wordList: Word[]): Word | null => {
                 if (wordList.length === 0) return null;
     
@@ -71,13 +72,12 @@ export function LearningClient() {
                 for (const level of ['Hard', 'Medium', 'New', 'Easy']) {
                     const levelWords = wordList.filter(w => w.difficulty === level);
                     if (levelWords.length > 0) {
-                        return levelWords[0];
+                        return levelWords[Math.floor(Math.random() * levelWords.length)]; // Pick a random one from the level
                     }
                 }
                 return wordList[0];
             };
             
-            setTestedWordIds(new Set());
             const initialWord = getNextWord(words);
     
             setWordQueue(words);
@@ -88,9 +88,9 @@ export function LearningClient() {
             } else {
                 setState('finished');
             }
-        };
+        }
 
-        selectWords();
+        fetchAndSetWords();
     }, [difficultyFilter]);
 
 
@@ -101,8 +101,8 @@ export function LearningClient() {
                  setFallbackMessage("This word is not a verb or lacks complete verb forms. Switching to MCQ test.");
                  return 'mcq-en-bn';
              }
-             if (examType === 'fill-blanks' && (!word.exampleSentences || word.exampleSentences.length === 0)) {
-                setFallbackMessage("This word doesn't have an example sentence. Switching to MCQ test.");
+             if (examType === 'fill-blanks' && (!word.word || word.word.length < 3)) {
+                setFallbackMessage("This word is too short for a fill-in-the-blanks test. Switching to MCQ test.");
                 return 'mcq-bn-en';
              }
              return examType;
@@ -110,8 +110,9 @@ export function LearningClient() {
 
         // Dynamic Revision Logic
         if ((word.wrong_count?.spelling || 0) > 1) return 'spelling';
-        if (word.partOfSpeech === 'verb' && word.verb_forms) return 'verb-form';
-        if (Math.random() > 0.5) return 'mcq-bn-en';
+        if (word.partOfSpeech === 'verb' && word.verb_forms?.v1_present && word.verb_forms?.v2_past) return 'verb-form';
+        if (Math.random() > 0.66) return 'mcq-bn-en';
+        if (Math.random() > 0.33) return 'fill-blanks';
         return 'mcq-en-bn'; // Default dynamic choice
     }
 
@@ -158,14 +159,31 @@ export function LearningClient() {
     const handleNextWord = () => {
         if (!currentWord) return;
 
-        const newTestedWordIds = new Set(testedWordIds);
-        newTestedWordIds.add(currentWord.id);
+        const newTestedWordIds = new Set(testedWordIds).add(currentWord.id);
         setTestedWordIds(newTestedWordIds);
 
         const remainingWords = wordQueue.filter(word => !newTestedWordIds.has(word.id));
         
         if (remainingWords.length > 0) {
-            setCurrentWord(remainingWords[0]);
+            // Prioritization Logic for next word
+            const getNextWord = (wordList: Word[]): Word | null => {
+                if (wordList.length === 0) return null;
+    
+                const spellingPriorityWords = wordList.filter(w => (w.wrong_count?.spelling || 0) >= 3);
+                if (spellingPriorityWords.length > 0) {
+                    return spellingPriorityWords.sort((a, b) => (b.wrong_count?.spelling || 0) - (a.wrong_count?.spelling || 0))[0];
+                }
+    
+                for (const level of ['Hard', 'Medium', 'New', 'Easy']) {
+                    const levelWords = wordList.filter(w => w.difficulty === level);
+                     if (levelWords.length > 0) {
+                        return levelWords[Math.floor(Math.random() * levelWords.length)];
+                    }
+                }
+                return wordList[0];
+            };
+            
+            setCurrentWord(getNextWord(remainingWords));
             setState('testing');
             setFeedback(null);
             setFallbackMessage(null);
@@ -177,11 +195,14 @@ export function LearningClient() {
     
     const restartSession = () => {
         const currentFilter = difficultyFilter;
-        setDifficultyFilter('All'); // Trigger a change
-        // Use a timeout to ensure the state change is processed
-        setTimeout(() => {
-            setDifficultyFilter(currentFilter); // Set it back, which will re-trigger the useEffect
-        }, 0);
+        // This is a trick to force re-running the useEffect
+        if (currentFilter === 'All') {
+            setDifficultyFilter('Hard'); // Change to something else
+             setTimeout(() => setDifficultyFilter('All'), 0);
+        } else {
+            setDifficultyFilter('All'); // Change to something else
+            setTimeout(() => setDifficultyFilter(currentFilter), 0);
+        }
     };
 
 
