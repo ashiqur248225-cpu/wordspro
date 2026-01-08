@@ -168,7 +168,7 @@ function WordsClientContent() {
   }, [fetchWords]);
 
   useEffect(() => {
-    if (isMounted && initialDifficultyFilter && ['Easy', 'Medium', 'Hard'].includes(initialDifficultyFilter)) {
+    if (isMounted && initialDifficultyFilter && ['Easy', 'Medium', 'Hard', 'New', 'All'].includes(initialDifficultyFilter)) {
         setDifficultyFilter(initialDifficultyFilter);
     }
   }, [initialDifficultyFilter, isMounted]);
@@ -503,7 +503,7 @@ function WordsClientContent() {
                     <DropdownMenuLabel>Filter by Level</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuRadioGroup value={difficultyFilter} onValueChange={setDifficultyFilter}>
-                        {(["All", "Today's", 'Learned', 'Easy', 'Medium', 'Hard'] as const).map(d => (
+                        {(["All", "Today's", 'Learned', 'Easy', 'Medium', 'Hard', 'New'] as const).map(d => (
                             <DropdownMenuRadioItem key={d} value={d}>
                                 {d}
                             </DropdownMenuRadioItem>
@@ -558,7 +558,11 @@ function WordsClientContent() {
                 </TableHeader>
                 <TableBody>
                     {filteredWords.length > 0 ? filteredWords.map(word => (
-                        <TableRow key={word.id}>
+                        <TableRow 
+                            key={word.id} 
+                            onClick={() => router.push(`/words/${word.id}`)}
+                            className="cursor-pointer"
+                        >
                             <TableCell className="font-medium">{word.word}</TableCell>
                             <TableCell>{word.meaning}</TableCell>
                             <TableCell>{word.partOfSpeech.charAt(0).toUpperCase() + word.partOfSpeech.slice(1)}</TableCell>
@@ -566,19 +570,21 @@ function WordsClientContent() {
                             <TableCell className="text-right">
                                <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-8 w-8"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
                                             <MoreHorizontal className="h-4 w-4" />
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => router.push(`/words/${word.id}`)}>
-                                            Details
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleEdit(word)}>
+                                        <DropdownMenuItem onClick={(e) => {e.stopPropagation(); handleEdit(word);}}>
                                             Edit
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem onClick={() => handleDelete(word.id)} className="text-destructive">
+                                        <DropdownMenuItem onClick={(e) => {e.stopPropagation(); handleDelete(word.id);}} className="text-destructive">
                                             Delete
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
