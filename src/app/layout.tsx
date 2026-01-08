@@ -1,22 +1,13 @@
 'use client';
-import type { Metadata, Viewport } from 'next';
-import { usePathname } from 'next/navigation';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { MainNav } from '@/components/main-nav';
 import { MobileNav } from '@/components/mobile-nav';
-import { navItems } from '@/lib/nav-items';
-import { Logo } from '@/components/icons';
-
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const pathname = usePathname();
-  const currentNavItem = navItems.find((item) => pathname.startsWith(item.href));
-  const pageTitle = currentNavItem ? currentNavItem.label : 'WordPro';
 
   return (
     <html lang="en" suppressHydrationWarning className="dark">
@@ -36,14 +27,9 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <div className="flex min-h-screen w-full flex-col">
-          <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 justify-between">
-            <div className="flex items-center gap-4 md:hidden">
-              <MobileNav />
-            </div>
-             <div className="flex-1 text-center">
-              <h1 className="text-lg font-semibold">{pageTitle}</h1>
-            </div>
-            <div className="w-10 md:hidden"></div>
+          <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 justify-between md:hidden">
+            <MobileNav />
+            {/* The title is now handled in nested layouts */}
           </header>
           <main className="flex-1">{children}</main>
         </div>
