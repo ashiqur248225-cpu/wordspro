@@ -2,6 +2,7 @@ import { StatsCards } from './stats-cards';
 import { ProgressChart } from './progress-chart';
 import { WordReviewCard } from './word-review-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { RecentActivity } from './recent-activity';
 
 export default function Dashboard() {
   return (
@@ -30,14 +31,11 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>
-              You've mastered 5 words this week. Keep going!
+              Your latest word updates and additions.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Placeholder for recent activity feed */}
-            <div className="flex h-full min-h-[240px] items-center justify-center rounded-lg border-2 border-dashed">
-              <p className="text-muted-foreground">No recent activity</p>
-            </div>
+            <RecentActivity />
           </CardContent>
         </Card>
       </div>
