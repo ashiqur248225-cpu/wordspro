@@ -385,8 +385,7 @@ function WordsClientContent() {
   };
 
   const handleStartExam = (quizType: string) => {
-      const wordIds = filteredWords.map(w => w.id);
-      if (wordIds.length === 0) {
+      if (filteredWords.length === 0) {
           toast({
               variant: 'destructive',
               title: 'No Words Selected',
@@ -394,7 +393,8 @@ function WordsClientContent() {
           });
           return;
       }
-      router.push(`/learn?quizType=${quizType}&wordIds=${JSON.stringify(wordIds)}`);
+      // Instead of passing IDs, we can just pass the difficulty filter
+      router.push(`/learn?quizType=${quizType}&difficulty=${difficultyFilter}`);
   };
   
   const pageTitle = `Words List (${filteredWords.length})`;
@@ -408,15 +408,12 @@ function WordsClientContent() {
   }
 
   const examTypes = [
-      { id: 'dynamic-revision', label: 'Dynamic Revision' },
-      { id: 'mcq-en-bn', label: 'MCQ (Eng to Ban)' },
-      { id: 'mcq-bn-en', label: 'MCQ (Ban to Eng)', disabled: true },
-      { id: 'spelling-meaning', label: 'Spelling (from Meaning)', disabled: true },
-      { id: 'spelling-listening', label: 'Spelling (from Listening)', disabled: true },
-      { id: 'fill-blanks-word', label: 'Fill in the Blanks (Word)', disabled: true },
-      { id: 'fill-blanks-sentence', label: 'Fill in the Blanks (Sentence)', disabled: true },
-      { id: 'verb-form-test', label: 'Verb Form Test', disabled: true },
-      { id: 'synonym-antonym-test', label: 'Synonym/Antonym Test', disabled: true },
+      { id: 'dynamic', label: 'Dynamic Revision', disabled: false },
+      { id: 'mcq-en-bn', label: 'MCQ (Eng to Ban)', disabled: false },
+      { id: 'mcq-bn-en', label: 'MCQ (Ban to Eng)', disabled: false },
+      { id: 'spelling', label: 'Spelling Test', disabled: false },
+      { id: 'fill-blanks', label: 'Fill-in-the-Blanks', disabled: false },
+      { id: 'verb-form', label: 'Verb Form Test', disabled: false },
   ]
 
   return (
@@ -681,3 +678,5 @@ export function WordsClientPage() {
         </Suspense>
     )
 }
+
+    

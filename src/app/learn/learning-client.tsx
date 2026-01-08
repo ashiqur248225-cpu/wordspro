@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { getWordsByDifficulty, getAllWords, updateWord } from '@/lib/db';
 import type { Word, WordDifficulty, VerbFormDetail } from '@/lib/types';
 import { McqEnBnQuiz } from '../quiz/mcq-en-bn';
@@ -15,6 +16,8 @@ import { CheckCircle, XCircle, ArrowRight, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 type LearningState = 'loading' | 'testing' | 'feedback' | 'finished';
 type DifficultyFilter = 'All' | "Today's" | 'Hard' | 'Medium' | 'Easy' | 'New' | 'Learned';
@@ -39,7 +42,11 @@ interface WordCounts {
 
 const difficultyLevels: WordDifficulty[] = ['Easy', 'Medium', 'Hard'];
 
-export function LearningClient() {
+function LearningClientInternal() {
+    const searchParams = useSearchParams();
+    const initialDifficulty = searchParams.get('difficulty') as DifficultyFilter | null;
+    const initialExamType = searchParams.get('quizType') as ExamType | null;
+
     const [state, setState] = useState<LearningState>('loading');
     const [wordQueue, setWordQueue] = useState<Word[]>([]);
     const [currentWord, setCurrentWord] = useState<Word | null>(null);
@@ -48,8 +55,8 @@ export function LearningClient() {
     const [fallbackMessage, setFallbackMessage] = useState<string | null>(null);
     const [wordCounts, setWordCounts] = useState<WordCounts | null>(null);
 
-    const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('Hard');
-    const [examType, setExamType] = useState<ExamType>('dynamic');
+    const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>(initialDifficulty || 'Hard');
+    const [examType, setExamType] = useState<ExamType>(initialExamType || 'dynamic');
 
     const getNextWord = useCallback((wordList: Word[], currentTestedIds: Set<string>): Word | null => {
         const availableWords = wordList.filter(w => !currentTestedIds.has(w.id));
@@ -203,15 +210,15 @@ export function LearningClient() {
     };
     
     const restartSession = () => {
-        setTestedWordIds(new Set());
         const currentFilter = difficultyFilter;
         // Trigger a re-fetch by changing the filter and then changing it back.
-        if (currentFilter === 'All') {
-            setDifficultyFilter('Hard');
-             setTimeout(() => setDifficultyFilter('All'), 0);
-        } else {
+        // This is a bit of a hack to force a re-fetch.
+        if (currentFilter !== 'All') {
             setDifficultyFilter('All');
-            setTimeout(() => setDifficultyFilter(currentFilter), 0);
+             setTimeout(() => setDifficultyFilter(currentFilter), 0);
+        } else {
+            setDifficultyFilter('Hard'); // Change to something else
+            setTimeout(() => setDifficultyFilter('All'), 0);
         }
     };
 
@@ -332,6 +339,14 @@ export function LearningClient() {
     );
 }
 
+export function LearningClient() {
+    return (
+        <Suspense fallback={<LoadingState />}>
+            <LearningClientInternal />
+        </Suspense>
+    )
+}
+
 function LoadingState() {
     return (
         <div className="space-y-4 animate-pulse">
@@ -348,21 +363,22 @@ function LoadingState() {
 
 function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, word: Word, onNext: () => void }) {
     
-    const VerbFormRow = ({ label, verbData }: { label: string, verbData?: VerbFormDetail }) => {
+    const VerbFormRow = ({ label, verbData, userAnswer, correctAnswer }: { label: string, verbData?: VerbFormDetail, userAnswer?: string, correctAnswer?: string }) => {
         if (!verbData?.word) return null;
+
+        const isCorrect = isSubmitted && userAnswer?.toLowerCase() === correctAnswer?.toLowerCase();
+
         return (
-            <div className="flex justify-between items-center py-3 border-b border-border/50 last:border-b-0">
-                <div className="flex flex-col">
-                    <p className="font-semibold">{label}</p>
-                    <p className="text-sm text-muted-foreground">{verbData.usage_timing}</p>
-                </div>
-                <div className="text-right">
-                    <p className="font-semibold">{verbData.word}</p>
-                    <p className="text-sm text-muted-foreground">{verbData.bangla_meaning}</p>
-                </div>
-            </div>
+             <TableRow>
+                <TableCell className="font-medium">{label}</TableCell>
+                <TableCell>{verbData.word}</TableCell>
+                <TableCell>{verbData.bangla_meaning}</TableCell>
+                <TableCell className="text-right">{verbData.usage_timing}</TableCell>
+            </TableRow>
         )
     };
+
+    const isSubmitted = true; // In feedback screen, it's always submitted.
 
     return (
         <div className="text-center space-y-6 p-4 max-w-2xl mx-auto">
@@ -384,14 +400,23 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
 
             {!feedback.isCorrect && (
                 <Card className="bg-destructive/10 border-destructive/50">
+                     <CardHeader>
+                        <CardTitle className="text-destructive">Your Answer</CardTitle>
+                    </CardHeader>
                      <CardContent className="p-4 text-center">
-                        <p className="text-muted-foreground">Your answer:</p>
                         {typeof feedback.userAnswer === 'string' ? (
                             <p className="text-xl font-semibold line-through">{feedback.userAnswer}</p>
                         ) : (
-                            <p className="text-xl font-semibold line-through">
-                                V2: {feedback.userAnswer.v2}, V3: {feedback.userAnswer.v3}
-                            </p>
+                             <div className="space-y-2 text-left">
+                                <p className="text-lg font-semibold">
+                                    <span className="font-normal text-muted-foreground">V2: </span> 
+                                    <span className={feedback.userAnswer.v2.toLowerCase() === (word.verb_forms?.v2_past?.word || '').toLowerCase() ? 'text-green-500' : 'text-red-500 line-through'}>{feedback.userAnswer.v2}</span>
+                                </p>
+                                <p className="text-lg font-semibold">
+                                    <span className="font-normal text-muted-foreground">V3: </span> 
+                                    <span className={feedback.userAnswer.v3.toLowerCase() === (word.verb_forms?.v3_past_participle?.word || '').toLowerCase() ? 'text-green-500' : 'text-red-500 line-through'}>{feedback.userAnswer.v3}</span>
+                                </p>
+                             </div>
                         )}
                     </CardContent>
                 </Card>
@@ -401,9 +426,21 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
                 <Card className="bg-card/50">
                     <CardHeader><CardTitle>Verb Forms</CardTitle></CardHeader>
                     <CardContent className="px-6 text-left">
-                       <VerbFormRow label="Present (V1)" verbData={word.verb_forms.v1_present} />
-                       <VerbFormRow label="Past (V2)" verbData={word.verb_forms.v2_past} />
-                       <VerbFormRow label="Past Participle (V3)" verbData={word.verb_forms.v3_past_participle} />
+                       <Table>
+                            <TableHeader>
+                                <TableRow>
+                                <TableHead>Form</TableHead>
+                                <TableHead>Word</TableHead>
+                                <TableHead>Meaning</TableHead>
+                                <TableHead className="text-right">Timing</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <VerbFormRow label="Present (V1)" verbData={word.verb_forms.v1_present} />
+                                <VerbFormRow label="Past (V2)" verbData={word.verb_forms.v2_past} />
+                                <VerbFormRow label="Past Participle (V3)" verbData={word.verb_forms.v3_past_participle} />
+                            </TableBody>
+                        </Table>
                     </CardContent>
                 </Card>
             )}
