@@ -17,13 +17,13 @@ export function MobileNav() {
           <span className="sr-only">Toggle navigation menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left">
+      <SheetContent side="right">
         <SheetHeader>
           <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
         </SheetHeader>
         <nav className="grid gap-6 text-lg font-medium">
           <Link
-            href="#"
+            href="/dashboard"
             className="flex items-center gap-2 text-lg font-semibold"
           >
             <Logo className="h-6 w-6 text-primary" />
