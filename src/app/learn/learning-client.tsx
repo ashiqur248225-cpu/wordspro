@@ -12,7 +12,7 @@ import { FillBlanksQuiz } from '../quiz/fill-in-the-blanks-quiz';
 import { VerbFormQuiz } from '../quiz/verb-form-quiz';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, ArrowRight, BookOpen } from 'lucide-react';
+import { CheckCircle, XCircle, ArrowRight, BookOpen, Check, X } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
@@ -55,8 +55,10 @@ function LearningClientInternal() {
     const [fallbackMessage, setFallbackMessage] = useState<string | null>(null);
     const [wordCounts, setWordCounts] = useState<WordCounts | null>(null);
 
-    const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>(initialDifficulty || 'Hard');
-    const [examType, setExamType] = useState<ExamType>(initialExamType || 'dynamic');
+    const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('Hard');
+    const [examType, setExamType] = useState<ExamType>('dynamic');
+    
+    const [isInitialised, setIsInitialised] = useState(false);
 
     const getNextWord = useCallback((wordList: Word[], currentTestedIds: Set<string>): Word | null => {
         const availableWords = wordList.filter(w => !currentTestedIds.has(w.id));
@@ -75,11 +77,27 @@ function LearningClientInternal() {
         }
         return availableWords.length > 0 ? availableWords[0] : null;
     }, []);
+    
+    useEffect(() => {
+        if (!isInitialised) {
+            if (initialDifficulty) {
+                setDifficultyFilter(initialDifficulty);
+            }
+            if (initialExamType) {
+                setExamType(initialExamType);
+            }
+            setIsInitialised(true);
+        }
+    }, [initialDifficulty, initialExamType, isInitialised]);
+
 
     useEffect(() => {
+        if (!isInitialised) return;
+
         setState('loading');
         
-        getAllWords().then(allWords => {
+        async function fetchAndSetWords() {
+            const allWords = await getAllWords();
             const today = new Date().toDateString();
 
             const counts: WordCounts = {
@@ -119,9 +137,10 @@ function LearningClientInternal() {
             } else {
                 setState('finished');
             }
-        });
+        }
 
-    }, [difficultyFilter, getNextWord]);
+        fetchAndSetWords();
+    }, [difficultyFilter, getNextWord, isInitialised]);
 
 
     const determineTestType = (word: Word): ExamType => {
@@ -377,6 +396,34 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
         )
     };
 
+    const renderUserAnswerForVerb = () => {
+        if (typeof feedback.userAnswer === 'string' || typeof feedback.correctAnswer === 'string' ) return null;
+        
+        const isV2Correct = feedback.userAnswer.v2.toLowerCase() === feedback.correctAnswer.v2.toLowerCase();
+        const isV3Correct = feedback.userAnswer.v3.toLowerCase() === feedback.correctAnswer.v3.toLowerCase();
+
+        return (
+            <Table>
+                <TableBody>
+                    <TableRow>
+                        <TableCell className="font-medium">V2</TableCell>
+                        <TableCell className={isV2Correct ? 'text-green-500' : 'text-red-500 line-through'}>
+                            {feedback.userAnswer.v2 || "N/A"}
+                        </TableCell>
+                         <TableCell>{isV2Correct ? <Check className="h-5 w-5 text-green-500"/> : <X className="h-5 w-5 text-red-500"/>}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell className="font-medium">V3</TableCell>
+                        <TableCell className={isV3Correct ? 'text-green-500' : 'text-red-500 line-through'}>
+                            {feedback.userAnswer.v3 || "N/A"}
+                        </TableCell>
+                        <TableCell>{isV3Correct ? <Check className="h-5 w-5 text-green-500"/> : <X className="h-5 w-5 text-red-500"/>}</TableCell>
+                    </TableRow>
+                </TableBody>
+            </Table>
+        );
+    }
+
     return (
         <div className="text-center space-y-6 p-4 max-w-2xl mx-auto">
             <div className="flex flex-col items-center gap-2">
@@ -388,8 +435,10 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
             </div>
             
             <Card className="bg-card/50">
+                 <CardHeader>
+                    <CardTitle className="text-center">Correct Answer</CardTitle>
+                </CardHeader>
                 <CardContent className="p-4 text-center">
-                    <p className="text-muted-foreground">The word was:</p>
                     <p className="text-3xl font-bold text-primary">{word.word}</p>
                     <p className="text-xl text-muted-foreground">"{word.meaning}"</p>
                 </CardContent>
@@ -401,24 +450,15 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
                         <CardTitle className="text-destructive">Your Answer</CardTitle>
                     </CardHeader>
                      <CardContent className="p-4 text-center">
-                        {typeof feedback.userAnswer === 'string' ? (
-                            <p className="text-xl font-semibold line-through">{feedback.userAnswer}</p>
+                        {feedback.quizType === 'verb-form' ? (
+                            renderUserAnswerForVerb()
                         ) : (
-                             <div className="space-y-2 text-left">
-                                <p className="text-lg font-semibold">
-                                    <span className="font-normal text-muted-foreground">V2: </span> 
-                                    <span className={feedback.userAnswer.v2.toLowerCase() === (word.verb_forms?.v2_past?.word || '').toLowerCase() ? 'text-green-500' : 'text-red-500 line-through'}>{feedback.userAnswer.v2 || 'N/A'}</span>
-                                </p>
-                                <p className="text-lg font-semibold">
-                                    <span className="font-normal text-muted-foreground">V3: </span> 
-                                    <span className={feedback.userAnswer.v3.toLowerCase() === (word.verb_forms?.v3_past_participle?.word || '').toLowerCase() ? 'text-green-500' : 'text-red-500 line-through'}>{feedback.userAnswer.v3 || 'N/A'}</span>
-                                </p>
-                             </div>
+                            <p className="text-xl font-semibold line-through">{typeof feedback.userAnswer === 'string' ? feedback.userAnswer : ''}</p>
                         )}
                     </CardContent>
                 </Card>
             )}
-
+            
             {word.verb_forms && (
                 <Card className="bg-card/50">
                     <CardHeader><CardTitle>Verb Forms</CardTitle></CardHeader>
@@ -481,3 +521,5 @@ function FinishedState({ onRestart }: { onRestart: () => void }) {
         </div>
     )
 }
+
+    
