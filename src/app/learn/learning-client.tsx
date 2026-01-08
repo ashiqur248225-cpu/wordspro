@@ -94,7 +94,7 @@ export function LearningClient() {
 
     useEffect(() => {
         selectWords();
-    }, [difficultyFilter, selectWords]);
+    }, [selectWords]);
 
 
     const determineTestType = (word: Word): ExamType => {
