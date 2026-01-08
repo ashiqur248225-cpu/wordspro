@@ -21,6 +21,16 @@ import {
   DialogDescription
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
     Form,
     FormControl,
     FormField,
@@ -133,6 +143,7 @@ function WordsClientContent() {
   const [editingWord, setEditingWord] = useState<Word | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [importJson, setImportJson] = useState('');
+  const [wordToDelete, setWordToDelete] = useState<string | null>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('All');
@@ -488,6 +499,31 @@ function WordsClientContent() {
             </DialogContent>
         </Dialog>
 
+        <AlertDialog open={!!wordToDelete} onOpenChange={() => setWordToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the
+                    word from your vocabulary.
+                </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setWordToDelete(null)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                    onClick={async () => {
+                    if (wordToDelete) {
+                        await handleDelete(wordToDelete);
+                    }
+                    setWordToDelete(null);
+                    }}
+                >
+                    Continue
+                </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
         <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
             <DialogContent className="sm:max-w-[625px]">
                 <DialogHeader>
@@ -614,7 +650,7 @@ function WordsClientContent() {
                                             Edit
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem onClick={(e) => {e.stopPropagation(); handleDelete(word.id);}} className="text-destructive">
+                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setWordToDelete(word.id); }} className="text-destructive">
                                             Delete
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
@@ -645,5 +681,3 @@ export function WordsClientPage() {
         </Suspense>
     )
 }
-
-    
