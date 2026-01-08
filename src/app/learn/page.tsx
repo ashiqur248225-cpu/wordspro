@@ -5,12 +5,9 @@ import { PageTemplate } from '@/components/page-template';
 
 function ExamPage() {
   return (
-    <PageTemplate
-      title="Exam Session"
-      description="Test your vocabulary with various quiz types."
-    >
+    <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
       <LearningClient />
-    </PageTemplate>
+    </div>
   );
 }
 
