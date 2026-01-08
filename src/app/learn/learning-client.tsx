@@ -40,62 +40,62 @@ export function LearningClient() {
     const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('Hard');
     const [examType, setExamType] = useState<ExamType>('dynamic');
 
-    const selectWords = useCallback(async () => {
-        setState('loading');
-        setTestedWordIds(new Set()); // Reset tested words for new session
-        let words: Word[] = [];
-        const today = new Date().toDateString();
-
-        // 1. Initial Filtering
-        if (difficultyFilter === 'All') {
-            words = await getAllWords();
-        } else if (difficultyFilter === "Today's") {
-            const allWords = await getAllWords();
-            words = allWords.filter(w => new Date(w.createdAt).toDateString() === today);
-        } else if (['New', 'Easy', 'Medium', 'Hard'].includes(difficultyFilter)) {
-            words = await getWordsByDifficulty([difficultyFilter as WordDifficulty]);
-        } else { // Default to Hard and Medium if no filter is selected
-            words = await getWordsByDifficulty(['Hard', 'Medium']);
-        }
-        
-        // 2. Prioritization
-        const getNextWord = (wordList: Word[]): Word | null => {
-            if (wordList.length === 0) return null;
-
-            // Highest Priority: Spelling errors
-            const spellingPriorityWords = wordList.filter(w => (w.wrong_count?.spelling || 0) >= 3);
-            if (spellingPriorityWords.length > 0) {
-                return spellingPriorityWords.sort((a, b) => (b.wrong_count?.spelling || 0) - (a.wrong_count?.spelling || 0))[0];
-            }
-
-            // Second Priority: Difficulty Level (Hard > Medium > New > Easy)
-            for (const level of ['Hard', 'Medium', 'New', 'Easy']) {
-                const levelWords = wordList.filter(w => w.difficulty === level);
-                if (levelWords.length > 0) {
-                    // Third Priority: Least recently reviewed
-                    // This part is simplified as we don't have `last_reviewed` yet.
-                    // We can just pick one from this level.
-                    return levelWords[0];
-                }
-            }
-            return wordList[0];
-        };
-        
-        const initialWord = getNextWord(words.filter(w => !testedWordIds.has(w.id)));
-
-        setWordQueue(words);
-        setCurrentWord(initialWord);
-
-        if (initialWord) {
-            setState('testing');
-        } else {
-            setState('finished');
-        }
-    }, [difficultyFilter]);
-
     useEffect(() => {
+        const selectWords = async () => {
+            setState('loading');
+            setTestedWordIds(new Set()); // Reset tested words for new session
+            let words: Word[] = [];
+            const today = new Date().toDateString();
+    
+            // 1. Initial Filtering
+            if (difficultyFilter === 'All') {
+                words = await getAllWords();
+            } else if (difficultyFilter === "Today's") {
+                const allWords = await getAllWords();
+                words = allWords.filter(w => new Date(w.createdAt).toDateString() === today);
+            } else if (['New', 'Easy', 'Medium', 'Hard'].includes(difficultyFilter)) {
+                words = await getWordsByDifficulty([difficultyFilter as WordDifficulty]);
+            } else { // Default to Hard and Medium if no filter is selected
+                words = await getWordsByDifficulty(['Hard', 'Medium']);
+            }
+            
+            // 2. Prioritization
+            const getNextWord = (wordList: Word[]): Word | null => {
+                if (wordList.length === 0) return null;
+    
+                // Highest Priority: Spelling errors
+                const spellingPriorityWords = wordList.filter(w => (w.wrong_count?.spelling || 0) >= 3);
+                if (spellingPriorityWords.length > 0) {
+                    return spellingPriorityWords.sort((a, b) => (b.wrong_count?.spelling || 0) - (a.wrong_count?.spelling || 0))[0];
+                }
+    
+                // Second Priority: Difficulty Level (Hard > Medium > New > Easy)
+                for (const level of ['Hard', 'Medium', 'New', 'Easy']) {
+                    const levelWords = wordList.filter(w => w.difficulty === level);
+                    if (levelWords.length > 0) {
+                        // Third Priority: Least recently reviewed
+                        // This part is simplified as we don't have `last_reviewed` yet.
+                        // We can just pick one from this level.
+                        return levelWords[0];
+                    }
+                }
+                return wordList[0];
+            };
+            
+            const initialWord = getNextWord(words);
+    
+            setWordQueue(words);
+            setCurrentWord(initialWord);
+    
+            if (initialWord) {
+                setState('testing');
+            } else {
+                setState('finished');
+            }
+        };
+
         selectWords();
-    }, [selectWords]);
+    }, [difficultyFilter]);
 
 
     const determineTestType = (word: Word): ExamType => {
@@ -183,8 +183,11 @@ export function LearningClient() {
     };
     
     const restartSession = () => {
-        setTestedWordIds(new Set());
-        selectWords();
+        // This will trigger the useEffect to re-run by changing the filter
+        // and then setting it back, ensuring a clean restart.
+        const currentFilter = difficultyFilter;
+        setDifficultyFilter('All'); 
+        setTimeout(() => setDifficultyFilter(currentFilter), 0);
     };
 
 
@@ -362,7 +365,5 @@ function FinishedState({ onRestart }: { onRestart: () => void }) {
         </div>
     )
 }
-
-    
 
     
