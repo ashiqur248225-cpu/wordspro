@@ -11,10 +11,11 @@ import { FillBlanksQuiz } from '../quiz/fill-in-the-blanks-quiz';
 import { VerbFormQuiz } from '../quiz/verb-form-quiz';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { CheckCircle, XCircle, Check, X } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 
 type LearningState = 'loading' | 'testing' | 'feedback' | 'finished';
@@ -23,8 +24,8 @@ type ExamType = 'dynamic' | 'mcq-en-bn' | 'mcq-bn-en' | 'spelling' | 'fill-blank
 
 interface AnswerFeedback {
     isCorrect: boolean;
-    correctAnswer: string;
-    userAnswer: string;
+    correctAnswer: string | { v2: string, v3: string };
+    userAnswer: string | { v2: string, v3: string };
     quizType: ExamType;
 }
 
@@ -44,11 +45,9 @@ export function LearningClient() {
     useEffect(() => {
         async function fetchAndSetWords() {
             setState('loading');
-            setTestedWordIds(new Set());
             let words: Word[] = [];
             const today = new Date().toDateString();
     
-            // 1. Initial Filtering
             if (difficultyFilter === 'All') {
                 words = await getAllWords();
             } else if (difficultyFilter === "Today's") {
@@ -56,11 +55,10 @@ export function LearningClient() {
                 words = allWords.filter(w => new Date(w.createdAt).toDateString() === today);
             } else if (['New', 'Easy', 'Medium', 'Hard'].includes(difficultyFilter)) {
                 words = await getWordsByDifficulty([difficultyFilter as WordDifficulty]);
-            } else { // Default to Hard and Medium if no filter is selected
+            } else {
                 words = await getWordsByDifficulty(['Hard', 'Medium']);
             }
             
-            // 2. Prioritization Logic (can be a standalone helper function if complex)
             const getNextWord = (wordList: Word[]): Word | null => {
                 if (wordList.length === 0) return null;
     
@@ -72,7 +70,7 @@ export function LearningClient() {
                 for (const level of ['Hard', 'Medium', 'New', 'Easy']) {
                     const levelWords = wordList.filter(w => w.difficulty === level);
                     if (levelWords.length > 0) {
-                        return levelWords[Math.floor(Math.random() * levelWords.length)]; // Pick a random one from the level
+                        return levelWords[Math.floor(Math.random() * levelWords.length)];
                     }
                 }
                 return wordList[0];
@@ -96,8 +94,7 @@ export function LearningClient() {
 
     const determineTestType = (word: Word): ExamType => {
         if (examType !== 'dynamic') {
-             // Fallback logic for user's choice
-             if (examType === 'verb-form' && (word.partOfSpeech !== 'verb' || !word.verb_forms?.v1_present || !word.verb_forms?.v2_past || !word.verb_forms?.v3_past_participle)) {
+             if (examType === 'verb-form' && (word.partOfSpeech !== 'verb' || !word.verb_forms?.v1_present?.word || !word.verb_forms?.v2_past?.word || !word.verb_forms?.v3_past_participle?.word)) {
                  setFallbackMessage("This word is not a verb or lacks complete verb forms. Switching to MCQ test.");
                  return 'mcq-en-bn';
              }
@@ -108,19 +105,17 @@ export function LearningClient() {
              return examType;
         }
 
-        // Dynamic Revision Logic
         if ((word.wrong_count?.spelling || 0) > 1) return 'spelling';
-        if (word.partOfSpeech === 'verb' && word.verb_forms?.v1_present && word.verb_forms?.v2_past) return 'verb-form';
+        if (word.partOfSpeech === 'verb' && word.verb_forms?.v1_present?.word && word.verb_forms?.v2_past?.word) return 'verb-form';
         if (Math.random() > 0.66) return 'mcq-bn-en';
         if (Math.random() > 0.33) return 'fill-blanks';
-        return 'mcq-en-bn'; // Default dynamic choice
+        return 'mcq-en-bn';
     }
 
-    const handleAnswer = async ({ isCorrect, userAnswer, quizType }: { isCorrect: boolean; userAnswer: string; quizType: ExamType }) => {
+    const handleAnswer = async ({ isCorrect, userAnswer, correctAnswer, quizType }: { isCorrect: boolean; userAnswer: AnswerFeedback['userAnswer'], correctAnswer: AnswerFeedback['correctAnswer'], quizType: ExamType }) => {
         if (!currentWord) return;
 
         const newStats = { ...currentWord };
-        let feedbackCorrectAnswer = currentWord.meaning;
 
         if (isCorrect) {
             newStats.correct_count = (newStats.correct_count || 0) + 1;
@@ -134,24 +129,20 @@ export function LearningClient() {
                 newStats.difficulty = difficultyLevels[currentDifficultyIndex + 1];
             }
             
-            // Initialize wrong_count if it doesn't exist
             if (!newStats.wrong_count) {
                 newStats.wrong_count = { spelling: 0, meaning: 0 };
             }
 
             if (quizType === 'spelling' || quizType === 'mcq-bn-en' || quizType === 'fill-blanks' || quizType === 'verb-form') {
                 newStats.wrong_count.spelling = (newStats.wrong_count.spelling || 0) + 1;
-                feedbackCorrectAnswer = currentWord.word;
             } else {
                  newStats.wrong_count.meaning = (newStats.wrong_count.meaning || 0) + 1;
-                 feedbackCorrectAnswer = currentWord.meaning;
             }
         }
         newStats.total_exams = (newStats.total_exams || 0) + 1;
 
         await updateWord(newStats as Word);
-
-        setFeedback({ isCorrect, correctAnswer: feedbackCorrectAnswer, userAnswer, quizType });
+        setFeedback({ isCorrect, correctAnswer, userAnswer, quizType });
         setState('feedback');
     };
 
@@ -165,7 +156,6 @@ export function LearningClient() {
         const remainingWords = wordQueue.filter(word => !newTestedWordIds.has(word.id));
         
         if (remainingWords.length > 0) {
-            // Prioritization Logic for next word
             const getNextWord = (wordList: Word[]): Word | null => {
                 if (wordList.length === 0) return null;
     
@@ -194,13 +184,13 @@ export function LearningClient() {
     };
     
     const restartSession = () => {
+        setTestedWordIds(new Set());
         const currentFilter = difficultyFilter;
-        // This is a trick to force re-running the useEffect
         if (currentFilter === 'All') {
-            setDifficultyFilter('Hard'); // Change to something else
+            setDifficultyFilter('Hard');
              setTimeout(() => setDifficultyFilter('All'), 0);
         } else {
-            setDifficultyFilter('All'); // Change to something else
+            setDifficultyFilter('All');
             setTimeout(() => setDifficultyFilter(currentFilter), 0);
         }
     };
@@ -215,27 +205,35 @@ export function LearningClient() {
             case 'mcq-en-bn':
                 return <McqEnBnQuiz 
                     words={[currentWord]} 
-                    onAnswer={(isCorrect, userAnswer) => handleAnswer({ isCorrect, userAnswer, quizType: 'mcq-en-bn' })} 
+                    onAnswer={(isCorrect, userAnswer) => handleAnswer({ isCorrect, userAnswer, correctAnswer: currentWord.meaning, quizType: 'mcq-en-bn' })} 
                 />;
             case 'mcq-bn-en':
                 return <McqBnEnQuiz 
                     words={[currentWord]} 
-                    onAnswer={(isCorrect, userAnswer) => handleAnswer({ isCorrect, userAnswer, quizType: 'mcq-bn-en' })} 
+                    onAnswer={(isCorrect, userAnswer) => handleAnswer({ isCorrect, userAnswer, correctAnswer: currentWord.word, quizType: 'mcq-bn-en' })} 
                 />;
             case 'spelling':
                  return <SpellingQuiz 
                     word={currentWord} 
-                    onAnswer={(isCorrect, userAnswer) => handleAnswer({ isCorrect, userAnswer, quizType: 'spelling' })}
+                    onAnswer={(isCorrect, userAnswer) => handleAnswer({ isCorrect, userAnswer, correctAnswer: currentWord.word, quizType: 'spelling' })}
                 />;
             case 'fill-blanks':
                  return <FillBlanksQuiz
                     word={currentWord}
-                    onAnswer={(isCorrect, userAnswer) => handleAnswer({ isCorrect, userAnswer, quizType: 'fill-blanks' })}
+                    onAnswer={(isCorrect, userAnswer) => handleAnswer({ isCorrect, userAnswer, correctAnswer: currentWord.word, quizType: 'fill-blanks' })}
                 />;
             case 'verb-form':
                  return <VerbFormQuiz
                     word={currentWord}
-                    onAnswer={(isCorrect, userAnswer) => handleAnswer({ isCorrect, userAnswer, quizType: 'verb-form' })}
+                    onAnswer={(isCorrect, userAnswer) => handleAnswer({ 
+                        isCorrect, 
+                        userAnswer,
+                        correctAnswer: {
+                            v2: currentWord.verb_forms?.v2_past?.word || '',
+                            v3: currentWord.verb_forms?.v3_past_participle?.word || '',
+                        },
+                        quizType: 'verb-form' 
+                    })}
                 />;
             default:
                 return (
@@ -324,46 +322,91 @@ function LoadingState() {
 }
 
 function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, word: Word, onNext: () => void }) {
-    const isSpellingTest = ['spelling', 'mcq-bn-en', 'fill-blanks', 'verb-form'].includes(feedback.quizType);
+    
+    const renderVerbFormFeedback = () => {
+        if (typeof feedback.correctAnswer !== 'object' || typeof feedback.userAnswer !== 'object') return null;
+        
+        const v2Correct = feedback.correctAnswer.v2.toLowerCase() === feedback.userAnswer.v2.toLowerCase();
+        const v3Correct = feedback.correctAnswer.v3.toLowerCase() === feedback.userAnswer.v3.toLowerCase();
 
-    const getFeedbackTitle = () => {
-        if (isSpellingTest) return 'spelling for';
-        return 'meaning for';
+        return (
+            <div className="space-y-4">
+                <Card>
+                    <CardContent className="p-4 space-y-4">
+                        <div className="flex justify-between items-center">
+                            <Badge variant="secondary">Present (V1)</Badge>
+                            <p className="font-bold text-lg">{word.verb_forms?.v1_present?.word}</p>
+                            <div className="w-6"></div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <Badge>Past (V2)</Badge>
+                            <div className="text-center">
+                                {!v2Correct && <p className="line-through text-red-500">{feedback.userAnswer.v2}</p>}
+                                <p className={`font-bold text-lg ${v2Correct ? 'text-green-500' : ''}`}>{feedback.correctAnswer.v2}</p>
+                            </div>
+                            {v2Correct ? <Check className="text-green-500" /> : <X className="text-red-500" />}
+                        </div>
+                         <div className="flex justify-between items-center">
+                            <Badge>Past Participle (V3)</Badge>
+                             <div className="text-center">
+                                {!v3Correct && <p className="line-through text-red-500">{feedback.userAnswer.v3}</p>}
+                                <p className={`font-bold text-lg ${v3Correct ? 'text-green-500' : ''}`}>{feedback.correctAnswer.v3}</p>
+                            </div>
+                            {v3Correct ? <Check className="text-green-500" /> : <X className="text-red-500" />}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        )
     }
 
-    const getFeedbackWord = () => {
-        if (isSpellingTest) {
-            // For BN to EN, the "word" is the meaning.
-            // For spelling and fill-blanks, it's the word itself, and we show the meaning.
-            return feedback.quizType === 'mcq-bn-en' ? word.meaning : word.word;
-        }
-        return word.word;
-    }
+    const renderDefaultFeedback = () => {
+        if (typeof feedback.correctAnswer !== 'string' || typeof feedback.userAnswer !== 'string') return null;
+        
+        const isMeaningTest = feedback.quizType === 'mcq-en-bn';
+        const questionWord = isMeaningTest ? word.word : word.meaning;
+        const feedbackTitle = isMeaningTest ? 'Meaning' : 'Word';
 
+        return (
+             <div className="space-y-4">
+                <p className="text-lg">For <span className="font-bold text-primary">{questionWord}</span></p>
+                
+                {!feedback.isCorrect && (
+                <Card>
+                    <CardContent className="p-4 flex items-center justify-between">
+                        <div>
+                             <p className="text-sm text-muted-foreground">Your Answer</p>
+                             <p className="font-semibold text-lg line-through">{feedback.userAnswer}</p>
+                        </div>
+                        <XCircle className="h-8 w-8 text-red-500" />
+                    </CardContent>
+                </Card>
+                )}
+
+                <Card className="border-green-500 border-2">
+                     <CardContent className="p-4 flex items-center justify-between">
+                        <div>
+                             <p className="text-sm text-muted-foreground">Correct {feedbackTitle}</p>
+                             <p className="font-semibold text-lg">{feedback.correctAnswer}</p>
+                        </div>
+                        <CheckCircle className="h-8 w-8 text-green-500" />
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
 
     return (
-        <div className={`text-center space-y-4 p-4 rounded-lg ${feedback.isCorrect ? 'bg-green-900/20' : 'bg-red-900/20'}`}>
-            {feedback.isCorrect ? (
-                <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-            ) : (
-                <XCircle className="h-16 w-16 text-red-500 mx-auto" />
-            )}
-            <h2 className="text-2xl font-bold">{feedback.isCorrect ? 'Correct!' : 'Incorrect'}</h2>
+        <div className="text-center space-y-6 p-4">
+            <h2 className="text-2xl font-bold">{feedback.isCorrect ? 'Correct!' : 'Review this!'}</h2>
             
-            {!feedback.isCorrect && (
-                <p className="text-lg">Your answer: <span className="font-semibold">{feedback.userAnswer}</span></p>
-            )}
+            {feedback.quizType === 'verb-form' ? renderVerbFormFeedback() : renderDefaultFeedback()}
 
-            <div className="text-lg bg-muted/50 p-4 rounded-md">
-                 <p>The correct {getFeedbackTitle()} <span className="font-bold text-primary">{getFeedbackWord()}</span> is:</p>
-                <p className="text-2xl font-semibold">{feedback.correctAnswer}</p>
-            </div>
-            
             {word.exampleSentences && word.exampleSentences[0] && (
-                 <p className="text-muted-foreground italic">e.g., "{word.exampleSentences[0]}"</p>
+                 <p className="text-muted-foreground italic pt-4">e.g., "{word.exampleSentences[0]}"</p>
             )}
 
-            <Button onClick={onNext} className="w-full md:w-1/2">
+            <Button onClick={onNext} className="w-full md:w-1/2 mt-4">
                 Next Word
             </Button>
         </div>
@@ -384,5 +427,3 @@ function FinishedState({ onRestart }: { onRestart: () => void }) {
         </div>
     )
 }
-
-    
