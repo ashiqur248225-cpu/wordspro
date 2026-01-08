@@ -177,10 +177,40 @@ function WordsClientContent() {
     let words = allWords;
 
     if (searchTerm) {
-        words = words.filter(word => 
-            word.word.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            word.meaning.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        const lowercasedFilter = searchTerm.toLowerCase();
+        words = words.filter(word => {
+            // Search word and meaning
+            if (word.word.toLowerCase().includes(lowercasedFilter)) return true;
+            if (word.meaning.toLowerCase().includes(lowercasedFilter)) return true;
+
+            // Search verb forms
+            if (word.verb_forms) {
+                if (word.verb_forms.v1_present?.word?.toLowerCase().includes(lowercasedFilter)) return true;
+                if (word.verb_forms.v1_present?.bangla_meaning?.toLowerCase().includes(lowercasedFilter)) return true;
+                if (word.verb_forms.v2_past?.word?.toLowerCase().includes(lowercasedFilter)) return true;
+                if (word.verb_forms.v2_past?.bangla_meaning?.toLowerCase().includes(lowercasedFilter)) return true;
+                if (word.verb_forms.v3_past_participle?.word?.toLowerCase().includes(lowercasedFilter)) return true;
+                if (word.verb_forms.v3_past_participle?.bangla_meaning?.toLowerCase().includes(lowercasedFilter)) return true;
+            }
+
+            // Search synonyms
+            if (word.synonyms?.some(syn => {
+                if (typeof syn === 'string') {
+                    return syn.toLowerCase().includes(lowercasedFilter);
+                }
+                return syn.word.toLowerCase().includes(lowercasedFilter) || syn.bangla?.toLowerCase().includes(lowercasedFilter);
+            })) return true;
+
+            // Search antonyms
+            if (word.antonyms?.some(ant => {
+                if (typeof ant === 'string') {
+                    return ant.toLowerCase().includes(lowercasedFilter);
+                }
+                return ant.word.toLowerCase().includes(lowercasedFilter) || ant.bangla?.toLowerCase().includes(lowercasedFilter);
+            })) return true;
+
+            return false;
+        });
     }
     
     if (difficultyFilter && difficultyFilter !== 'All') {
