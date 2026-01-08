@@ -42,6 +42,24 @@ export function LearningClient() {
     const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('Hard');
     const [examType, setExamType] = useState<ExamType>('dynamic');
 
+    const getNextWord = useCallback((wordList: Word[], currentTestedIds: Set<string>): Word | null => {
+        const availableWords = wordList.filter(w => !currentTestedIds.has(w.id));
+        if (availableWords.length === 0) return null;
+
+        const spellingPriorityWords = availableWords.filter(w => (w.wrong_count?.spelling || 0) >= 3);
+        if (spellingPriorityWords.length > 0) {
+            return spellingPriorityWords.sort((a, b) => (b.wrong_count?.spelling || 0) - (a.wrong_count?.spelling || 0))[0];
+        }
+
+        for (const level of ['Hard', 'Medium', 'New', 'Easy']) {
+            const levelWords = availableWords.filter(w => w.difficulty === level);
+            if (levelWords.length > 0) {
+                return levelWords[Math.floor(Math.random() * levelWords.length)];
+            }
+        }
+        return availableWords.length > 0 ? availableWords[0] : null;
+    }, []);
+
     useEffect(() => {
         async function fetchAndSetWords() {
             setState('loading');
@@ -59,26 +77,11 @@ export function LearningClient() {
                 words = await getWordsByDifficulty(['Hard', 'Medium']);
             }
             
-            const getNextWord = (wordList: Word[]): Word | null => {
-                if (wordList.length === 0) return null;
-    
-                const spellingPriorityWords = wordList.filter(w => (w.wrong_count?.spelling || 0) >= 3);
-                if (spellingPriorityWords.length > 0) {
-                    return spellingPriorityWords.sort((a, b) => (b.wrong_count?.spelling || 0) - (a.wrong_count?.spelling || 0))[0];
-                }
-    
-                for (const level of ['Hard', 'Medium', 'New', 'Easy']) {
-                    const levelWords = wordList.filter(w => w.difficulty === level);
-                    if (levelWords.length > 0) {
-                        return levelWords[Math.floor(Math.random() * levelWords.length)];
-                    }
-                }
-                return wordList[0];
-            };
-            
-            const initialWord = getNextWord(words);
-    
             setWordQueue(words);
+            const initialTestedIds = new Set<string>();
+            setTestedWordIds(initialTestedIds);
+
+            const initialWord = getNextWord(words, initialTestedIds);
             setCurrentWord(initialWord);
     
             if (initialWord) {
@@ -89,7 +92,7 @@ export function LearningClient() {
         }
 
         fetchAndSetWords();
-    }, [difficultyFilter]);
+    }, [difficultyFilter, getNextWord]);
 
 
     const determineTestType = (word: Word): ExamType => {
@@ -153,27 +156,10 @@ export function LearningClient() {
         const newTestedWordIds = new Set(testedWordIds).add(currentWord.id);
         setTestedWordIds(newTestedWordIds);
 
-        const remainingWords = wordQueue.filter(word => !newTestedWordIds.has(word.id));
+        const nextWord = getNextWord(wordQueue, newTestedWordIds);
         
-        if (remainingWords.length > 0) {
-            const getNextWord = (wordList: Word[]): Word | null => {
-                if (wordList.length === 0) return null;
-    
-                const spellingPriorityWords = wordList.filter(w => (w.wrong_count?.spelling || 0) >= 3);
-                if (spellingPriorityWords.length > 0) {
-                    return spellingPriorityWords.sort((a, b) => (b.wrong_count?.spelling || 0) - (a.wrong_count?.spelling || 0))[0];
-                }
-    
-                for (const level of ['Hard', 'Medium', 'New', 'Easy']) {
-                    const levelWords = wordList.filter(w => w.difficulty === level);
-                     if (levelWords.length > 0) {
-                        return levelWords[Math.floor(Math.random() * levelWords.length)];
-                    }
-                }
-                return wordList[0];
-            };
-            
-            setCurrentWord(getNextWord(remainingWords));
+        if (nextWord) {
+            setCurrentWord(nextWord);
             setState('testing');
             setFeedback(null);
             setFallbackMessage(null);
@@ -184,8 +170,8 @@ export function LearningClient() {
     };
     
     const restartSession = () => {
-        setTestedWordIds(new Set());
         const currentFilter = difficultyFilter;
+        // Trigger a re-fetch by changing the filter and then changing it back.
         if (currentFilter === 'All') {
             setDifficultyFilter('Hard');
              setTimeout(() => setDifficultyFilter('All'), 0);
@@ -324,7 +310,7 @@ function LoadingState() {
 function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, word: Word, onNext: () => void }) {
     
     const renderVerbFormFeedback = () => {
-        if (typeof feedback.correctAnswer !== 'object' || typeof feedback.userAnswer !== 'object') return null;
+        if (typeof feedback.correctAnswer !== 'object' || typeof feedback.userAnswer !== 'object' || !('v2' in feedback.correctAnswer) || !('v2' in feedback.userAnswer)) return null;
         
         const v2Correct = feedback.correctAnswer.v2.toLowerCase() === feedback.userAnswer.v2.toLowerCase();
         const v3Correct = feedback.correctAnswer.v3.toLowerCase() === feedback.userAnswer.v3.toLowerCase();
@@ -427,3 +413,5 @@ function FinishedState({ onRestart }: { onRestart: () => void }) {
         </div>
     )
 }
+
+    
