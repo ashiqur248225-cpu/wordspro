@@ -92,7 +92,7 @@ export function LearningClient() {
 
     useEffect(() => {
         selectWords();
-    }, [difficultyFilter, examType]); // Re-run when filters change
+    }, [difficultyFilter]); // Re-run when filters change
 
 
     const determineTestType = (word: Word): ExamType => {
@@ -221,8 +221,8 @@ export function LearningClient() {
         { value: 'dynamic', label: 'Dynamic Revision', disabled: false },
         { value: 'mcq-en-bn', label: 'MCQ (Eng to Ban)', disabled: false },
         { value: 'spelling', label: 'Spelling Test', disabled: false },
-        { value: 'fill-blanks', label: 'Fill-in-the-Blanks', disabled: true },
-        { value: 'verb-form', label: 'Verb Form Test', disabled: true },
+        { value: 'fill-blanks', label: 'Fill-in-the-Blanks', disabled: false },
+        { value: 'verb-form', label: 'Verb Form Test', disabled: false },
     ];
 
     return (
@@ -328,3 +328,5 @@ function FinishedState({ onRestart }: { onRestart: () => void }) {
         </div>
     )
 }
+
+    
