@@ -382,8 +382,13 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
             )}
 
             <div className="flex flex-col sm:flex-row gap-2 justify-center pt-4">
-                 <Button onClick={onNext} className="w-full sm:w-auto bg-accent text-accent-foreground hover:bg-accent/90">
+                 <Button onClick={onNext} className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90">
                     Next Word <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                <Button variant="outline" asChild className="w-full sm:w-auto">
+                    <Link href={`/words/${word.id}`}>
+                        View Details <BookOpen className="ml-2 h-4 w-4" />
+                    </Link>
                 </Button>
             </div>
         </div>
