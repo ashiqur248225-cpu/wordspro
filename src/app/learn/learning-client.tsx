@@ -55,10 +55,8 @@ function LearningClientInternal() {
     const [fallbackMessage, setFallbackMessage] = useState<string | null>(null);
     const [wordCounts, setWordCounts] = useState<WordCounts | null>(null);
 
-    const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('Hard');
-    const [examType, setExamType] = useState<ExamType>('dynamic');
-    
-    const [isInitialised, setIsInitialised] = useState(false);
+    const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>(initialDifficulty || 'Hard');
+    const [examType, setExamType] = useState<ExamType>(initialExamType || 'dynamic');
 
     const getNextWord = useCallback((wordList: Word[], currentTestedIds: Set<string>): Word | null => {
         const availableWords = wordList.filter(w => !currentTestedIds.has(w.id));
@@ -77,23 +75,8 @@ function LearningClientInternal() {
         }
         return availableWords.length > 0 ? availableWords[0] : null;
     }, []);
-    
-    useEffect(() => {
-        if (!isInitialised) {
-            if (initialDifficulty) {
-                setDifficultyFilter(initialDifficulty);
-            }
-            if (initialExamType) {
-                setExamType(initialExamType);
-            }
-            setIsInitialised(true);
-        }
-    }, [initialDifficulty, initialExamType, isInitialised]);
-
 
     useEffect(() => {
-        if (!isInitialised) return;
-
         setState('loading');
         
         async function fetchAndSetWords() {
@@ -140,7 +123,7 @@ function LearningClientInternal() {
         }
 
         fetchAndSetWords();
-    }, [difficultyFilter, getNextWord, isInitialised]);
+    }, [difficultyFilter, getNextWord]);
 
 
     const determineTestType = (word: Word): ExamType => {
