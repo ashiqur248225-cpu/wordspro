@@ -44,8 +44,13 @@ const difficultyLevels: WordDifficulty[] = ['Easy', 'Medium', 'Hard'];
 
 function LearningClientInternal() {
     const searchParams = useSearchParams();
-    const initialDifficulty = searchParams.get('difficulty') as DifficultyFilter | null;
-    const initialExamType = searchParams.get('quizType') as ExamType | null;
+    
+    const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>(() => 
+        (searchParams.get('difficulty') as DifficultyFilter | null) || 'Hard'
+    );
+    const [examType, setExamType] = useState<ExamType>(() => 
+        (searchParams.get('quizType') as ExamType | null) || 'dynamic'
+    );
 
     const [state, setState] = useState<LearningState>('loading');
     const [wordQueue, setWordQueue] = useState<Word[]>([]);
@@ -54,19 +59,6 @@ function LearningClientInternal() {
     const [testedWordIds, setTestedWordIds] = useState<Set<string>>(new Set());
     const [fallbackMessage, setFallbackMessage] = useState<string | null>(null);
     const [wordCounts, setWordCounts] = useState<WordCounts | null>(null);
-
-    const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('Hard');
-    const [examType, setExamType] = useState<ExamType>('dynamic');
-    
-    useEffect(() => {
-        if (initialDifficulty) {
-            setDifficultyFilter(initialDifficulty);
-        }
-        if (initialExamType) {
-            setExamType(initialExamType);
-        }
-    }, [initialDifficulty, initialExamType]);
-
 
     const getNextWord = useCallback((wordList: Word[], currentTestedIds: Set<string>): Word | null => {
         const availableWords = wordList.filter(w => !currentTestedIds.has(w.id));
@@ -514,5 +506,3 @@ function FinishedState({ onRestart }: { onRestart: () => void }) {
         </div>
     )
 }
-
-    
