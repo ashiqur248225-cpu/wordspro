@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
@@ -25,6 +26,7 @@ const COLORS = ['hsl(var(--chart-5))', 'hsl(var(--chart-3))'];
 export function PerformanceClient() {
     const [stats, setStats] = useState<PerformanceStats | null>(null);
     const [loading, setLoading] = useState(true);
+    const router = useRouter();
 
     useEffect(() => {
         async function fetchPerformanceData() {
@@ -249,9 +251,16 @@ export function PerformanceClient() {
                             {stats.mostMistakenWords.map(word => {
                                 const totalWrongs = (word.wrong_count?.spelling || 0) + (word.wrong_count?.meaning || 0);
                                 return (
-                                <Link href={`/words/${word.id}`} key={word.id} legacyBehavior>
-                                    <TableRow className="cursor-pointer">
-                                        <TableCell className="font-medium">{word.word}</TableCell>
+                                    <TableRow 
+                                        key={word.id}
+                                        onClick={() => router.push(`/words/${word.id}`)}
+                                        className="cursor-pointer"
+                                    >
+                                        <TableCell className="font-medium">
+                                            <Link href={`/words/${word.id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
+                                               {word.word}
+                                            </Link>
+                                        </TableCell>
                                         <TableCell>
                                             <Badge variant="outline">{word.partOfSpeech}</Badge>
                                         </TableCell>
@@ -259,7 +268,6 @@ export function PerformanceClient() {
                                         <TableCell className="text-center">{word.wrong_count?.spelling || 0}</TableCell>
                                         <TableCell className="text-center">{word.wrong_count?.meaning || 0}</TableCell>
                                     </TableRow>
-                                 </Link>
                                 )
                             })}
                         </TableBody>
