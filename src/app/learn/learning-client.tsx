@@ -11,12 +11,10 @@ import { FillBlanksQuiz } from '../quiz/fill-in-the-blanks-quiz';
 import { VerbFormQuiz } from '../quiz/verb-form-quiz';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, Check, X, ArrowRight, BookOpen } from 'lucide-react';
+import { CheckCircle, XCircle, ArrowRight, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-
 
 type LearningState = 'loading' | 'testing' | 'feedback' | 'finished';
 type DifficultyFilter = 'All' | "Today's" | 'Hard' | 'Medium' | 'Easy' | 'New';
@@ -77,9 +75,9 @@ export function LearningClient() {
                 words = await getWordsByDifficulty(['Hard', 'Medium']);
             }
             
-            setWordQueue(words);
             const initialTestedIds = new Set<string>();
             setTestedWordIds(initialTestedIds);
+            setWordQueue(words);
 
             const initialWord = getNextWord(words, initialTestedIds);
             setCurrentWord(initialWord);
@@ -108,10 +106,19 @@ export function LearningClient() {
              return examType;
         }
 
-        if ((word.wrong_count?.spelling || 0) > 1) return 'spelling';
-        if (word.partOfSpeech === 'verb' && word.verb_forms?.v1_present?.word && word.verb_forms?.v2_past?.word) return 'verb-form';
-        if (Math.random() > 0.66) return 'mcq-bn-en';
-        if (Math.random() > 0.33) return 'fill-blanks';
+        const wrongSpellingCount = word.wrong_count?.spelling || 0;
+        if (wrongSpellingCount > 1 && wrongSpellingCount > (word.wrong_count?.meaning || 0)) {
+            return 'spelling';
+        }
+
+        if (word.partOfSpeech === 'verb' && word.verb_forms?.v1_present?.word && word.verb_forms?.v2_past?.word) {
+            const rand = Math.random();
+            if (rand < 0.33) return 'verb-form';
+        }
+        
+        const rand = Math.random();
+        if (rand < 0.33) return 'mcq-bn-en';
+        if (rand < 0.66) return 'fill-blanks';
         return 'mcq-en-bn';
     }
 
@@ -309,16 +316,12 @@ function LoadingState() {
 
 function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, word: Word, onNext: () => void }) {
     
-    const VerbFormRow = ({ label, verbData, isCorrect }: { label: string, verbData?: VerbFormDetail, isCorrect?: boolean }) => {
+    const VerbFormRow = ({ label, verbData }: { label: string, verbData?: VerbFormDetail }) => {
         if (!verbData?.word) return null;
         return (
-            <div className="flex justify-between items-center py-2 border-b last:border-b-0">
-                <div className="flex-1">
-                    <p className="font-semibold">{label}</p>
-                    <p className="text-sm text-muted-foreground">{verbData.usage_timing}</p>
-                </div>
-                <p className="flex-1 text-center font-bold text-lg">{verbData.word}</p>
-                <p className="flex-1 text-right">{verbData.bangla_meaning}</p>
+            <div className="flex justify-between items-center py-3 border-b border-border/50 last:border-b-0">
+                <p className="font-semibold">{label} ({verbData.word})</p>
+                <p className="text-muted-foreground">{verbData.bangla_meaning}</p>
             </div>
         )
     };
@@ -330,11 +333,11 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
                     <CheckCircle className="h-16 w-16 text-green-500" /> : 
                     <XCircle className="h-16 w-16 text-red-500" />
                 }
-                <h2 className="text-3xl font-bold">{feedback.isCorrect ? 'Correct!' : 'Review this!'}</h2>
+                <h2 className="text-3xl font-bold">{feedback.isCorrect ? 'Correct!' : 'Incorrect'}</h2>
             </div>
             
-            <Card>
-                <CardContent className="p-6 text-center">
+            <Card className="bg-card/50">
+                <CardContent className="p-4 text-center">
                     <p className="text-muted-foreground">The word was:</p>
                     <p className="text-3xl font-bold text-primary">{word.word}</p>
                     <p className="text-xl text-muted-foreground">"{word.meaning}"</p>
@@ -342,25 +345,22 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
             </Card>
 
             {!feedback.isCorrect && (
-                <Card className="border-red-500/50">
-                    <CardHeader>
-                        <CardTitle className="text-lg">Your Answer</CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                <Card className="bg-destructive/10 border-destructive/50">
+                     <CardContent className="p-4 text-center">
+                        <p className="text-muted-foreground">Your answer:</p>
                         {typeof feedback.userAnswer === 'string' ? (
                             <p className="text-xl font-semibold line-through">{feedback.userAnswer}</p>
                         ) : (
-                            <div className="space-y-2 text-left">
-                                <p><span className="font-semibold">V2:</span> <span className="line-through">{feedback.userAnswer.v2}</span></p>
-                                <p><span className="font-semibold">V3:</span> <span className="line-through">{feedback.userAnswer.v3}</span></p>
-                            </div>
+                            <p className="text-xl font-semibold line-through">
+                                V2: {feedback.userAnswer.v2}, V3: {feedback.userAnswer.v3}
+                            </p>
                         )}
                     </CardContent>
                 </Card>
             )}
 
             {word.verb_forms && (
-                <Card>
+                <Card className="bg-card/50">
                     <CardHeader><CardTitle>Verb Forms</CardTitle></CardHeader>
                     <CardContent className="px-6 text-left">
                        <VerbFormRow label="Present (V1)" verbData={word.verb_forms.v1_present} />
@@ -371,8 +371,8 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
             )}
 
             {word.exampleSentences && word.exampleSentences.length > 0 && (
-                 <Card>
-                    <CardHeader><CardTitle>Examples</CardTitle></CardHeader>
+                 <Card className="bg-card/50">
+                    <CardHeader><CardTitle>Example</CardTitle></CardHeader>
                     <CardContent className="text-left">
                         <ul className="list-disc list-inside space-y-2 text-muted-foreground">
                             {word.exampleSentences.map((ex, i) => <li key={i}>"{ex}"</li>)}
@@ -382,14 +382,8 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
             )}
 
             <div className="flex flex-col sm:flex-row gap-2 justify-center pt-4">
-                 <Button onClick={onNext} className="w-full sm:w-auto">
+                 <Button onClick={onNext} className="w-full sm:w-auto bg-accent text-accent-foreground hover:bg-accent/90">
                     Next Word <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-                <Button variant="outline" asChild className="w-full sm:w-auto">
-                    <Link href={`/words/${word.id}`}>
-                        <BookOpen className="mr-2 h-4 w-4" />
-                        View Details
-                    </Link>
                 </Button>
             </div>
         </div>
@@ -410,7 +404,3 @@ function FinishedState({ onRestart }: { onRestart: () => void }) {
         </div>
     )
 }
-
-    
-
-    
