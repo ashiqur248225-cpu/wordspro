@@ -1,33 +1,28 @@
-import Link from 'next/link';
-import { ArrowUpRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { StatsCards } from './stats-cards';
 import { ProgressChart } from './progress-chart';
 import { WordReviewCard } from './word-review-card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function Dashboard() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-       <header className="flex h-14 items-center gap-4 px-6">
+      <header className="flex items-center gap-4">
         <div className="flex-1">
-          <h1 className="font-semibold text-lg">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">An overview of your learning journey.</p>
+          <h1 className="font-semibold text-2xl">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
+            An overview of your learning journey.
+          </p>
         </div>
       </header>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCards />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <WordReviewCard difficulty="Easy" />
-          <WordReviewCard difficulty="Medium" />
-          <WordReviewCard difficulty="Hard" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <WordReviewCard difficulty="Hard" />
+        <WordReviewCard difficulty="Medium" />
+        <WordReviewCard difficulty="Easy" />
+        <WordReviewCard difficulty="New" />
+        <WordReviewCard difficulty="All" />
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-4">
         <Card className="col-span-4">
@@ -50,8 +45,8 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {/* Placeholder for recent activity feed */}
-            <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed">
-                <p className="text-muted-foreground">No recent activity</p>
+            <div className="flex h-full min-h-[240px] items-center justify-center rounded-lg border-2 border-dashed">
+              <p className="text-muted-foreground">No recent activity</p>
             </div>
           </CardContent>
         </Card>
