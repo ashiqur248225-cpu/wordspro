@@ -8,6 +8,7 @@ import { McqEnBnQuiz } from '../quiz/mcq-en-bn';
 import { McqBnEnQuiz } from '../quiz/mcq-bn-en';
 import { SpellingQuiz } from '../quiz/spelling-quiz';
 import { FillBlanksQuiz } from '../quiz/fill-in-the-blanks-quiz';
+import { VerbFormQuiz } from '../quiz/verb-form-quiz';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle } from 'lucide-react';
@@ -62,19 +63,14 @@ export function LearningClient() {
             const getNextWord = (wordList: Word[]): Word | null => {
                 if (wordList.length === 0) return null;
     
-                // Highest Priority: Spelling errors
                 const spellingPriorityWords = wordList.filter(w => (w.wrong_count?.spelling || 0) >= 3);
                 if (spellingPriorityWords.length > 0) {
                     return spellingPriorityWords.sort((a, b) => (b.wrong_count?.spelling || 0) - (a.wrong_count?.spelling || 0))[0];
                 }
     
-                // Second Priority: Difficulty Level (Hard > Medium > New > Easy)
                 for (const level of ['Hard', 'Medium', 'New', 'Easy']) {
                     const levelWords = wordList.filter(w => w.difficulty === level);
                     if (levelWords.length > 0) {
-                        // Third Priority: Least recently reviewed
-                        // This part is simplified as we don't have `last_reviewed` yet.
-                        // We can just pick one from this level.
                         return levelWords[0];
                     }
                 }
@@ -101,8 +97,8 @@ export function LearningClient() {
     const determineTestType = (word: Word): ExamType => {
         if (examType !== 'dynamic') {
              // Fallback logic for user's choice
-             if (examType === 'verb-form' && word.partOfSpeech !== 'verb') {
-                 setFallbackMessage("This word is not a verb. Switching to MCQ test.");
+             if (examType === 'verb-form' && (word.partOfSpeech !== 'verb' || !word.verb_forms?.v1_present || !word.verb_forms?.v2_past || !word.verb_forms?.v3_past_participle)) {
+                 setFallbackMessage("This word is not a verb or lacks complete verb forms. Switching to MCQ test.");
                  return 'mcq-en-bn';
              }
              if (examType === 'fill-blanks' && (!word.exampleSentences || word.exampleSentences.length === 0)) {
@@ -142,7 +138,7 @@ export function LearningClient() {
                 newStats.wrong_count = { spelling: 0, meaning: 0 };
             }
 
-            if (quizType === 'spelling' || quizType === 'mcq-bn-en' || quizType === 'fill-blanks') {
+            if (quizType === 'spelling' || quizType === 'mcq-bn-en' || quizType === 'fill-blanks' || quizType === 'verb-form') {
                 newStats.wrong_count.spelling = (newStats.wrong_count.spelling || 0) + 1;
                 feedbackCorrectAnswer = currentWord.word;
             } else {
@@ -169,9 +165,6 @@ export function LearningClient() {
         const remainingWords = wordQueue.filter(word => !newTestedWordIds.has(word.id));
         
         if (remainingWords.length > 0) {
-            // Smart selection logic can be re-applied here if needed,
-            // or just take the next from the sorted queue.
-            // For simplicity, we'll just process the queue.
             setCurrentWord(remainingWords[0]);
             setState('testing');
             setFeedback(null);
@@ -183,11 +176,12 @@ export function LearningClient() {
     };
     
     const restartSession = () => {
-        // This will trigger the useEffect to re-run by changing the filter
-        // and then setting it back, ensuring a clean restart.
         const currentFilter = difficultyFilter;
-        setDifficultyFilter('All'); 
-        setTimeout(() => setDifficultyFilter(currentFilter), 0);
+        setDifficultyFilter('All'); // Trigger a change
+        // Use a timeout to ensure the state change is processed
+        setTimeout(() => {
+            setDifficultyFilter(currentFilter); // Set it back, which will re-trigger the useEffect
+        }, 0);
     };
 
 
@@ -218,6 +212,10 @@ export function LearningClient() {
                     onAnswer={(isCorrect, userAnswer) => handleAnswer({ isCorrect, userAnswer, quizType: 'fill-blanks' })}
                 />;
             case 'verb-form':
+                 return <VerbFormQuiz
+                    word={currentWord}
+                    onAnswer={(isCorrect, userAnswer) => handleAnswer({ isCorrect, userAnswer, quizType: 'verb-form' })}
+                />;
             default:
                 return (
                     <div className="text-center p-8">
@@ -305,7 +303,7 @@ function LoadingState() {
 }
 
 function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, word: Word, onNext: () => void }) {
-    const isSpellingTest = feedback.quizType === 'spelling' || feedback.quizType === 'mcq-bn-en' || feedback.quizType === 'fill-blanks';
+    const isSpellingTest = ['spelling', 'mcq-bn-en', 'fill-blanks', 'verb-form'].includes(feedback.quizType);
 
     const getFeedbackTitle = () => {
         if (isSpellingTest) return 'spelling for';
