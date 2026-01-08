@@ -23,6 +23,22 @@ interface PerformanceStats {
 
 const COLORS = ['hsl(var(--chart-5))', 'hsl(var(--chart-3))'];
 
+const errorChartConfig = {
+    'Spelling Errors': {
+      label: 'Spelling',
+      color: 'hsl(var(--chart-5))',
+    },
+    'Meaning Errors': {
+      label: 'Meaning',
+      color: 'hsl(var(--chart-3))',
+    },
+};
+
+const accuracyChartConfig = {
+    accuracy: { label: 'Accuracy', color: 'hsl(var(--chart-1))' },
+};
+
+
 export function PerformanceClient() {
     const [stats, setStats] = useState<PerformanceStats | null>(null);
     const [loading, setLoading] = useState(true);
@@ -128,17 +144,13 @@ export function PerformanceClient() {
                     <p className="mb-4 mt-2 text-sm text-muted-foreground">
                         You haven't taken any exams yet. Start learning to see your performance.
                     </p>
-                    <Link href="/learn">
-                        <Button>Start Exam</Button>
-                    </Link>
+                     <Button asChild>
+                        <Link href="/learn">Start Exam</Link>
+                    </Button>
                 </div>
             </div>
         );
     }
-    
-    const chartConfig = {
-        accuracy: { label: 'Accuracy', color: 'hsl(var(--chart-1))' },
-    };
 
     return (
         <div className="space-y-6">
@@ -188,26 +200,31 @@ export function PerformanceClient() {
                         <CardDescription>Breakdown of your mistakes.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ResponsiveContainer width="100%" height={250}>
-                            <PieChart>
-                                <Pie
-                                    data={stats.errorDistribution}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    outerRadius={80}
-                                    fill="#8884d8"
-                                    dataKey="value"
-                                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                                >
-                                    {stats.errorDistribution.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip content={<ChartTooltipContent hideLabel />} />
-                                <Legend />
-                            </PieChart>
-                        </ResponsiveContainer>
+                        <ChartContainer config={errorChartConfig} className="h-[250px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={stats.errorDistribution}
+                                        cx="50%"
+                                        cy="50%"
+                                        labelLine={false}
+                                        outerRadius={80}
+                                        fill="#8884d8"
+                                        dataKey="value"
+                                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                    >
+                                        {stats.errorDistribution.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip
+                                        cursor={{fill: 'hsl(var(--muted))'}}
+                                        content={<ChartTooltipContent hideLabel />}
+                                    />
+                                    <Legend />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </ChartContainer>
                     </CardContent>
                 </Card>
                 
@@ -217,7 +234,7 @@ export function PerformanceClient() {
                         <CardDescription>Your accuracy trend.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                        <ChartContainer config={accuracyChartConfig} className="h-[250px] w-full">
                              <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={stats.performanceOverTime}>
                                     <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
