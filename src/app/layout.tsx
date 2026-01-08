@@ -16,12 +16,12 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const currentNavItem = navItems.find((item) => pathname.startsWith(item.href));
-  const pageTitle = currentNavItem ? currentNavItem.label : '';
+  const pageTitle = currentNavItem ? currentNavItem.label : 'WordPro';
 
   return (
     <html lang="en" suppressHydrationWarning className="dark">
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
