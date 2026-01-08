@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -77,10 +77,9 @@ function LearningClientInternal() {
     }, []);
 
     useEffect(() => {
-        async function fetchAndSetWords() {
-            setState('loading');
-            
-            const allWords = await getAllWords();
+        setState('loading');
+        
+        getAllWords().then(allWords => {
             const today = new Date().toDateString();
 
             const counts: WordCounts = {
@@ -120,9 +119,8 @@ function LearningClientInternal() {
             } else {
                 setState('finished');
             }
-        }
+        });
 
-        fetchAndSetWords();
     }, [difficultyFilter, getNextWord]);
 
 
@@ -210,15 +208,18 @@ function LearningClientInternal() {
     };
     
     const restartSession = () => {
-        const currentFilter = difficultyFilter;
-        // Trigger a re-fetch by changing the filter and then changing it back.
-        // This is a bit of a hack to force a re-fetch.
-        if (currentFilter !== 'All') {
-            setDifficultyFilter('All');
-             setTimeout(() => setDifficultyFilter(currentFilter), 0);
+        const initialTestedIds = new Set<string>();
+        setTestedWordIds(initialTestedIds);
+        
+        const firstWord = getNextWord(wordQueue, initialTestedIds);
+        setCurrentWord(firstWord);
+
+        if (firstWord) {
+            setState('testing');
+            setFeedback(null);
+            setFallbackMessage(null);
         } else {
-            setDifficultyFilter('Hard'); // Change to something else
-            setTimeout(() => setDifficultyFilter('All'), 0);
+            setState('finished');
         }
     };
 
@@ -363,10 +364,8 @@ function LoadingState() {
 
 function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, word: Word, onNext: () => void }) {
     
-    const VerbFormRow = ({ label, verbData, userAnswer, correctAnswer }: { label: string, verbData?: VerbFormDetail, userAnswer?: string, correctAnswer?: string }) => {
+    const VerbFormRow = ({ label, verbData }: { label: string, verbData?: VerbFormDetail}) => {
         if (!verbData?.word) return null;
-
-        const isCorrect = isSubmitted && userAnswer?.toLowerCase() === correctAnswer?.toLowerCase();
 
         return (
              <TableRow>
@@ -377,8 +376,6 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
             </TableRow>
         )
     };
-
-    const isSubmitted = true; // In feedback screen, it's always submitted.
 
     return (
         <div className="text-center space-y-6 p-4 max-w-2xl mx-auto">
@@ -410,11 +407,11 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
                              <div className="space-y-2 text-left">
                                 <p className="text-lg font-semibold">
                                     <span className="font-normal text-muted-foreground">V2: </span> 
-                                    <span className={feedback.userAnswer.v2.toLowerCase() === (word.verb_forms?.v2_past?.word || '').toLowerCase() ? 'text-green-500' : 'text-red-500 line-through'}>{feedback.userAnswer.v2}</span>
+                                    <span className={feedback.userAnswer.v2.toLowerCase() === (word.verb_forms?.v2_past?.word || '').toLowerCase() ? 'text-green-500' : 'text-red-500 line-through'}>{feedback.userAnswer.v2 || 'N/A'}</span>
                                 </p>
                                 <p className="text-lg font-semibold">
                                     <span className="font-normal text-muted-foreground">V3: </span> 
-                                    <span className={feedback.userAnswer.v3.toLowerCase() === (word.verb_forms?.v3_past_participle?.word || '').toLowerCase() ? 'text-green-500' : 'text-red-500 line-through'}>{feedback.userAnswer.v3}</span>
+                                    <span className={feedback.userAnswer.v3.toLowerCase() === (word.verb_forms?.v3_past_participle?.word || '').toLowerCase() ? 'text-green-500' : 'text-red-500 line-through'}>{feedback.userAnswer.v3 || 'N/A'}</span>
                                 </p>
                              </div>
                         )}
@@ -484,5 +481,3 @@ function FinishedState({ onRestart }: { onRestart: () => void }) {
         </div>
     )
 }
-
-    
