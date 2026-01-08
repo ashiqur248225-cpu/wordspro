@@ -17,7 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 
 type LearningState = 'loading' | 'testing' | 'feedback' | 'finished';
-type DifficultyFilter = 'All' | "Today's" | 'Hard' | 'Medium' | 'Easy' | 'New';
+type DifficultyFilter = 'All' | "Today's" | 'Hard' | 'Medium' | 'Easy' | 'New' | 'Learned';
 type ExamType = 'dynamic' | 'mcq-en-bn' | 'mcq-bn-en' | 'spelling' | 'fill-blanks' | 'verb-form';
 
 interface AnswerFeedback {
@@ -25,6 +25,16 @@ interface AnswerFeedback {
     correctAnswer: string | { v2: string, v3: string };
     userAnswer: string | { v2: string, v3: string };
     quizType: ExamType;
+}
+
+interface WordCounts {
+    All: number;
+    "Today's": number;
+    Learned: number;
+    Hard: number;
+    Medium: number;
+    Easy: number;
+    New: number;
 }
 
 const difficultyLevels: WordDifficulty[] = ['Easy', 'Medium', 'Hard'];
@@ -36,6 +46,7 @@ export function LearningClient() {
     const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
     const [testedWordIds, setTestedWordIds] = useState<Set<string>>(new Set());
     const [fallbackMessage, setFallbackMessage] = useState<string | null>(null);
+    const [wordCounts, setWordCounts] = useState<WordCounts | null>(null);
 
     const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('Hard');
     const [examType, setExamType] = useState<ExamType>('dynamic');
@@ -61,18 +72,33 @@ export function LearningClient() {
     useEffect(() => {
         async function fetchAndSetWords() {
             setState('loading');
-            let words: Word[] = [];
+            
+            const allWords = await getAllWords();
             const today = new Date().toDateString();
+
+            const counts: WordCounts = {
+                All: allWords.length,
+                "Today's": allWords.filter(w => new Date(w.createdAt).toDateString() === today).length,
+                Learned: allWords.filter(w => w.difficulty === 'Easy').length,
+                New: allWords.filter(w => w.difficulty === 'New').length,
+                Easy: allWords.filter(w => w.difficulty === 'Easy').length,
+                Medium: allWords.filter(w => w.difficulty === 'Medium').length,
+                Hard: allWords.filter(w => w.difficulty === 'Hard').length,
+            };
+            setWordCounts(counts);
+
+            let words: Word[] = [];
     
             if (difficultyFilter === 'All') {
-                words = await getAllWords();
+                words = allWords;
             } else if (difficultyFilter === "Today's") {
-                const allWords = await getAllWords();
                 words = allWords.filter(w => new Date(w.createdAt).toDateString() === today);
+            } else if (difficultyFilter === "Learned") {
+                words = allWords.filter(w => w.difficulty === 'Easy');
             } else if (['New', 'Easy', 'Medium', 'Hard'].includes(difficultyFilter)) {
-                words = await getWordsByDifficulty([difficultyFilter as WordDifficulty]);
+                words = allWords.filter(w => w.difficulty === difficultyFilter);
             } else {
-                words = await getWordsByDifficulty(['Hard', 'Medium']);
+                words = allWords.filter(w => w.difficulty === 'Hard' || w.difficulty === 'Medium');
             }
             
             const initialTestedIds = new Set<string>();
@@ -177,6 +203,7 @@ export function LearningClient() {
     };
     
     const restartSession = () => {
+        setTestedWordIds(new Set());
         const currentFilter = difficultyFilter;
         // Trigger a re-fetch by changing the filter and then changing it back.
         if (currentFilter === 'All') {
@@ -239,12 +266,13 @@ export function LearningClient() {
     };
 
     const difficultyOptions: { value: DifficultyFilter, label: string }[] = [
-        { value: 'Hard', label: 'Hard Words' },
-        { value: 'Medium', label: 'Medium Words' },
-        { value: 'Easy', label: 'Easy Words' },
-        { value: 'New', label: 'New Words' },
         { value: 'All', label: 'All Words' },
         { value: "Today's", label: "Today's Words" },
+        { value: 'Learned', label: 'Learned Words' },
+        { value: 'Easy', label: 'Easy Words' },
+        { value: 'Medium', label: 'Medium Words' },
+        { value: 'Hard', label: 'Hard Words' },
+        { value: 'New', label: 'New Words' },
     ];
 
      const examTypeOptions: { value: ExamType, label: string, disabled: boolean }[] = [
@@ -262,7 +290,11 @@ export function LearningClient() {
                 <Select value={difficultyFilter} onValueChange={(val) => setDifficultyFilter(val as DifficultyFilter)}>
                     <SelectTrigger><SelectValue placeholder="Select Difficulty" /></SelectTrigger>
                     <SelectContent>
-                        {difficultyOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                        {difficultyOptions.map(opt => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label} {wordCounts && `(${wordCounts[opt.value as keyof WordCounts]})`}
+                            </SelectItem>
+                        ))}
                     </SelectContent>
                 </Select>
                  <Select value={examType} onValueChange={(val) => setExamType(val as ExamType)}>
@@ -320,8 +352,14 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
         if (!verbData?.word) return null;
         return (
             <div className="flex justify-between items-center py-3 border-b border-border/50 last:border-b-0">
-                <p className="font-semibold">{label} ({verbData.word})</p>
-                <p className="text-muted-foreground">{verbData.bangla_meaning}</p>
+                <div className="flex flex-col">
+                    <p className="font-semibold">{label}</p>
+                    <p className="text-sm text-muted-foreground">{verbData.usage_timing}</p>
+                </div>
+                <div className="text-right">
+                    <p className="font-semibold">{verbData.word}</p>
+                    <p className="text-sm text-muted-foreground">{verbData.bangla_meaning}</p>
+                </div>
             </div>
         )
     };
@@ -409,3 +447,5 @@ function FinishedState({ onRestart }: { onRestart: () => void }) {
         </div>
     )
 }
+
+    
