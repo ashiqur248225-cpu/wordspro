@@ -37,13 +37,12 @@ export default function RootLayout({
         <div className="flex min-h-screen w-full flex-col">
           <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 justify-between">
             <div className="flex items-center gap-4">
-               <Logo className="h-6 w-6 text-primary" />
-               <span className="font-bold hidden md:inline-block">WordPro</span>
+              <MobileNav />
             </div>
              <div className="flex-1 text-center">
               <h1 className="text-lg font-semibold">{pageTitle}</h1>
             </div>
-            <MobileNav />
+            <div className="w-10"></div>
           </header>
           <main className="flex-1">{children}</main>
         </div>
