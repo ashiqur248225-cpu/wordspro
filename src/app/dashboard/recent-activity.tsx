@@ -4,12 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getAllWords } from '@/lib/db';
 import type { Word } from '@/lib/types';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
+import { PlusCircle, FilePenLine } from 'lucide-react';
 
-function getInitials(word: string) {
-    return word.substring(0, 2).toUpperCase();
-}
 
 export function RecentActivity() {
     const [recentWords, setRecentWords] = useState<Word[]>([]);
@@ -19,7 +16,7 @@ export function RecentActivity() {
         async function fetchRecentActivity() {
             try {
                 const allWords = await getAllWords();
-                const sortedWords = allWords.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.createdAt).getTime());
+                const sortedWords = allWords.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
                 setRecentWords(sortedWords.slice(0, 5));
             } catch (error) {
                 console.error("Failed to fetch recent activity:", error);
@@ -35,7 +32,7 @@ export function RecentActivity() {
              <div className="space-y-4">
                 {[...Array(5)].map((_, i) => (
                     <div key={i} className="flex items-center gap-4">
-                        <div className="h-9 w-9 rounded-full bg-muted animate-pulse" />
+                        <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
                         <div className="grid gap-1 w-full">
                            <div className="h-4 bg-muted animate-pulse w-1/2" />
                            <div className="h-3 bg-muted animate-pulse w-1/4" />
@@ -55,22 +52,25 @@ export function RecentActivity() {
     }
 
     return (
-        <div className="space-y-6">
-            {recentWords.map((word) => (
-                <Link href={`/words/${word.id}`} key={word.id} className="flex items-center gap-4 group">
-                    <Avatar className="h-9 w-9">
-                        <AvatarFallback>{getInitials(word.word)}</AvatarFallback>
-                    </Avatar>
-                    <div className="grid gap-1">
-                        <p className="text-sm font-medium leading-none group-hover:underline">
-                            {new Date(word.createdAt).getTime() === new Date(word.updatedAt).getTime() ? "Added word:" : "Updated word:"} <span className="text-primary">{word.word}</span>
-                        </p>
+        <div className="space-y-2">
+            {recentWords.map((word) => {
+                const isNew = new Date(word.createdAt).getTime() === new Date(word.updatedAt).getTime();
+                return (
+                    <Link href={`/words/${word.id}`} key={word.id} className="flex items-center gap-3 p-2 -mx-2 rounded-lg transition-colors hover:bg-muted/50">
+                        <div className={`flex h-8 w-8 items-center justify-center rounded-full ${isNew ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'}`}>
+                            {isNew ? <PlusCircle className="h-4 w-4" /> : <FilePenLine className="h-4 w-4" />}
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-sm font-medium leading-none">
+                                {isNew ? "Added:" : "Updated:"} <span className="text-primary">{word.word}</span>
+                            </p>
+                        </div>
                         <p className="text-sm text-muted-foreground">
                             {formatDistanceToNow(new Date(word.updatedAt), { addSuffix: true })}
                         </p>
-                    </div>
-                </Link>
-            ))}
+                    </Link>
+                )
+            })}
         </div>
     );
 }
