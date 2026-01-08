@@ -18,43 +18,31 @@ interface WordProDB extends DBSchema {
 
 let dbPromise: Promise<IDBPDatabase<WordProDB>> | null = null;
 
-const getDbInstance = () => {
+const getDbInstance = (): Promise<IDBPDatabase<WordProDB>> => {
   if (typeof window === 'undefined') {
-    // Return a mock object or null on the server
-    return null;
+    return Promise.reject(new Error('IndexedDB cannot be accessed on the server.'));
   }
   if (!dbPromise) {
-    dbPromise = openDB<WordProDB>('WordProDB', 3, { // Bumped version to 3
+    dbPromise = openDB<WordProDB>('WordProDB', 3, {
       upgrade(db, oldVersion, newVersion, transaction) {
-        if (oldVersion < 1) {
-            // Initial schema
-             if (!db.objectStoreNames.contains('words')) {
-                const store = db.createObjectStore('words', {
-                    keyPath: 'id',
-                });
-                store.createIndex('difficulty', 'difficulty');
-                store.createIndex('word', 'word', { unique: true });
-            }
-            if (!db.objectStoreNames.contains('notes')) {
-                db.createObjectStore('notes', {
-                    keyPath: 'id',
-                    autoIncrement: true,
-                });
-            }
+        if (!db.objectStoreNames.contains('words')) {
+          const store = db.createObjectStore('words', {
+            keyPath: 'id',
+          });
+          store.createIndex('difficulty', 'difficulty');
+          store.createIndex('word', 'word', { unique: true });
         }
-        if (oldVersion < 2) {
-             // Migration for version 2
-            if (db.objectStoreNames.contains('words')) {
-                db.deleteObjectStore('words');
-            }
-            const store = db.createObjectStore('words', {
-                keyPath: 'id',
-            });
-            store.createIndex('difficulty', 'difficulty');
-            store.createIndex('word', 'word', { unique: true });
+        if (!db.objectStoreNames.contains('notes')) {
+          const notesStore = db.createObjectStore('notes', {
+            keyPath: 'id',
+            autoIncrement: true,
+          });
+          if (!notesStore.indexNames.contains('category')) {
+            notesStore.createIndex('category', 'category');
+          }
         }
-         if (oldVersion < 3) {
-            // Add category index to notes
+        
+        if (oldVersion < 3 && transaction) {
             const notesStore = transaction.objectStore('notes');
             if (!notesStore.indexNames.contains('category')) {
                 notesStore.createIndex('category', 'category');
@@ -66,7 +54,6 @@ const getDbInstance = () => {
   return dbPromise;
 };
 
-
 export const getDB = async () => {
     return getDbInstance();
 }
@@ -74,7 +61,6 @@ export const getDB = async () => {
 // Word Functions
 export async function addWord(word: Omit<Word, 'id' | 'createdAt' | 'updatedAt'>) {
     const db = await getDbInstance();
-    if (!db) return;
     const now = new Date().toISOString();
     const newId = crypto.randomUUID();
     return db.add('words', { 
@@ -87,8 +73,6 @@ export async function addWord(word: Omit<Word, 'id' | 'createdAt' | 'updatedAt'>
 
 export async function bulkAddWords(words: any[]) {
     const db = await getDbInstance();
-    if (!db) return { successCount: 0, errorCount: 0, errors: [] };
-
     const tx = db.transaction('words', 'readwrite');
     let successCount = 0;
     let errorCount = 0;
@@ -129,59 +113,72 @@ export async function bulkAddWords(words: any[]) {
     return { successCount, errorCount, errors };
 }
 
-export async function getAllWords() {
-    const db = await getDbInstance();
-    if (!db) return [];
-    return db.getAll('words');
+export async function getAllWords(): Promise<Word[]> {
+    try {
+        const db = await getDbInstance();
+        return await db.getAll('words');
+    } catch (error) {
+        console.error("Failed to get all words:", error);
+        return [];
+    }
 }
 
-export async function getWord(id: string) { // id is now string
-    const db = await getDbInstance();
-    if (!db) return undefined;
-    return db.get('words', id);
+export async function getWord(id: string): Promise<Word | undefined> {
+    try {
+        const db = await getDbInstance();
+        return await db.get('words', id);
+    } catch (error) {
+        console.error(`Failed to get word ${id}:`, error);
+        return undefined;
+    }
 }
 
 export async function updateWord(word: Word) {
     const db = await getDbInstance();
-    if (!db) return;
     const now = new Date().toISOString();
     return db.put('words', { ...word, updatedAt: now });
 }
 
 export async function deleteWord(id: string) { // id is now string
     const db = await getDbInstance();
-    if (!db) return;
     return db.delete('words', id);
 }
 
-export async function getWordsByDifficulty(difficulty: ('Easy' | 'Medium' | 'Hard' | 'New')[]) {
-    const db = await getDbInstance();
-    if (!db) return [];
-    const tx = db.transaction('words', 'readonly');
-    const index = tx.store.index('difficulty');
-    const promises = difficulty.map(level => index.getAll(level));
-    const results = await Promise.all(promises);
-    await tx.done;
-    return results.flat();
+export async function getWordsByDifficulty(difficulty: ('Easy' | 'Medium' | 'Hard' | 'New')[]): Promise<Word[]> {
+    try {
+        const db = await getDbInstance();
+        const tx = db.transaction('words', 'readonly');
+        const index = tx.store.index('difficulty');
+        const promises = difficulty.map(level => index.getAll(level));
+        const results = await Promise.all(promises);
+        await tx.done;
+        return results.flat();
+    } catch (error) {
+        console.error("Failed to get words by difficulty:", error);
+        return [];
+    }
 }
 
-export async function getWordsForQuiz(count: number) {
-    const db = await getDbInstance();
-    if (!db) return [];
-    let words = await getWordsByDifficulty(['Hard', 'Medium']);
-    if (words.length < count) {
-        const allWords = await getAllWords();
-        const otherWords = allWords.filter(w => w.difficulty !== 'Hard' && w.difficulty !== 'Medium');
-        words = [...words, ...otherWords];
+export async function getWordsForQuiz(count: number): Promise<Word[]> {
+    try {
+        const db = await getDbInstance();
+        let words = await getWordsByDifficulty(['Hard', 'Medium']);
+        if (words.length < count) {
+            const allWords = await getAllWords();
+            const otherWords = allWords.filter(w => w.difficulty !== 'Hard' && w.difficulty !== 'Medium');
+            words = [...words, ...otherWords];
+        }
+        return words.sort(() => 0.5 - Math.random()).slice(0, count);
+    } catch (error) {
+        console.error("Failed to get words for quiz:", error);
+        return [];
     }
-    return words.sort(() => 0.5 - Math.random()).slice(0, count);
 }
 
 
 // Note Functions
 export async function addNote(note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>) {
     const db = await getDbInstance();
-    if (!db) return;
     const now = new Date().toISOString();
     return db.add('notes', { 
         ...note, 
@@ -192,8 +189,6 @@ export async function addNote(note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>
 
 export async function bulkAddNotes(notes: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>[]) {
     const db = await getDbInstance();
-    if (!db) return { successCount: 0, errorCount: 0, errors: [] };
-
     const tx = db.transaction('notes', 'readwrite');
     let successCount = 0;
     let errorCount = 0;
@@ -218,21 +213,23 @@ export async function bulkAddNotes(notes: Omit<Note, 'id' | 'createdAt' | 'updat
 }
 
 
-export async function getAllNotes() {
-    const db = await getDbInstance();
-    if (!db) return [];
-    return db.getAll('notes');
+export async function getAllNotes(): Promise<Note[]> {
+    try {
+        const db = await getDbInstance();
+        return await db.getAll('notes');
+    } catch (error) {
+        console.error("Failed to get all notes:", error);
+        return [];
+    }
 }
 
 export async function updateNote(note: Note) {
     const db = await getDbInstance();
-    if (!db) return;
     const now = new Date().toISOString();
     return db.put('notes', { ...note, updatedAt: now });
 }
 
 export async function deleteNote(id: number) {
     const db = await getDbInstance();
-    if (!db) return;
     return db.delete('notes', id);
 }
