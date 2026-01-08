@@ -6,14 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export default function Dashboard() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-      <header className="flex items-center gap-4">
-        <div className="flex-1">
-          <h1 className="font-semibold text-2xl">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
-            An overview of your learning journey.
-          </p>
-        </div>
-      </header>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCards />
       </div>
