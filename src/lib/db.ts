@@ -63,6 +63,7 @@ export async function addWord(word: Omit<Word, 'id' | 'createdAt' | 'updatedAt'>
         id: newId,
         createdAt: now, 
         updatedAt: now,
+        correct_streak: 0, // Initialize streak
     } as Word);
 }
 
@@ -98,6 +99,7 @@ export async function bulkAddWords(words: any[]) {
                 correct_count: 0,
                 wrong_count: { spelling: 0, meaning: 0 },
                 total_exams: 0,
+                correct_streak: 0,
             };
             await tx.store.add(wordToAdd);
             successCount++;
@@ -153,7 +155,7 @@ export async function deleteWord(id: string) {
     return db.delete('words', id);
 }
 
-export async function getWordsByDifficulty(difficulty: ('Easy' | 'Medium' | 'Hard' | 'New')[]): Promise<Word[]> {
+export async function getWordsByDifficulty(difficulty: ('Easy' | 'Medium' | 'Hard' | 'New' | 'Learned')[]): Promise<Word[]> {
     const dbInstance = getDbInstance();
     if (!dbInstance) return [];
 

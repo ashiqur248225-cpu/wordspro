@@ -88,7 +88,7 @@ function LearningClientInternal() {
             const counts: WordCounts = {
                 All: allWords.length,
                 "Today's": allWords.filter(w => new Date(w.createdAt).toDateString() === today).length,
-                Learned: allWords.filter(w => w.difficulty === 'Easy').length,
+                Learned: allWords.filter(w => w.difficulty === 'Learned').length,
                 New: allWords.filter(w => w.difficulty === 'New').length,
                 Easy: allWords.filter(w => w.difficulty === 'Easy').length,
                 Medium: allWords.filter(w => w.difficulty === 'Medium').length,
@@ -99,15 +99,14 @@ function LearningClientInternal() {
             let words: Word[] = [];
     
             if (difficultyFilter === 'All') {
-                words = allWords;
+                // Exclude learned words from the default "All" category for exams
+                words = allWords.filter(w => w.difficulty !== 'Learned');
             } else if (difficultyFilter === "Today's") {
                 words = allWords.filter(w => new Date(w.createdAt).toDateString() === today);
-            } else if (difficultyFilter === "Learned") {
-                words = allWords.filter(w => w.difficulty === 'Easy');
-            } else if (['New', 'Easy', 'Medium', 'Hard'].includes(difficultyFilter)) {
+            } else if (['Learned', 'New', 'Easy', 'Medium', 'Hard'].includes(difficultyFilter)) {
                 words = allWords.filter(w => w.difficulty === difficultyFilter);
             } else {
-                words = allWords.filter(w => w.difficulty === 'Hard' || w.difficulty === 'Medium');
+                 words = allWords.filter(w => w.difficulty === 'Hard' || w.difficulty === 'Medium');
             }
             
             const initialTestedIds = new Set<string>();
@@ -160,45 +159,71 @@ function LearningClientInternal() {
     const handleAnswer = async ({ isCorrect, userAnswer, correctAnswer, quizType }: { isCorrect: boolean; userAnswer: AnswerFeedback['userAnswer'], correctAnswer: AnswerFeedback['correctAnswer'], quizType: ExamType }) => {
         if (!currentWord) return;
     
-        const newStats = { ...currentWord };
+        const updatedWord = { ...currentWord };
     
-        // Update counts
-        newStats.total_exams = (newStats.total_exams || 0) + 1;
+        // 1. Update basic stats
+        updatedWord.total_exams = (updatedWord.total_exams || 0) + 1;
+        
         if (isCorrect) {
-            newStats.correct_count = (newStats.correct_count || 0) + 1;
+            updatedWord.correct_count = (updatedWord.correct_count || 0) + 1;
+            updatedWord.correct_streak = (updatedWord.correct_streak || 0) + 1;
         } else {
-            if (!newStats.wrong_count) {
-                newStats.wrong_count = { spelling: 0, meaning: 0 };
+            updatedWord.correct_streak = 0; // Reset streak on wrong answer
+            if (!updatedWord.wrong_count) {
+                updatedWord.wrong_count = { spelling: 0, meaning: 0 };
             }
             if (['spelling', 'mcq-bn-en', 'fill-blanks', 'verb-form'].includes(quizType)) {
-                newStats.wrong_count.spelling = (newStats.wrong_count.spelling || 0) + 1;
+                updatedWord.wrong_count.spelling = (updatedWord.wrong_count.spelling || 0) + 1;
             } else {
-                newStats.wrong_count.meaning = (newStats.wrong_count.meaning || 0) + 1;
+                updatedWord.wrong_count.meaning = (updatedWord.wrong_count.meaning || 0) + 1;
             }
         }
-    
-        // Update difficulty based on the new logic
+
+        // 2. Update difficulty based on the new logic
+        const currentDifficulty = updatedWord.difficulty;
+        const correctStreak = updatedWord.correct_streak || 0;
+
         if (isCorrect) {
-            switch (newStats.difficulty) {
+            switch (currentDifficulty) {
                 case 'New':
-                    newStats.difficulty = 'Easy';
+                    updatedWord.difficulty = 'Medium';
                     break;
                 case 'Hard':
-                    newStats.difficulty = 'Medium';
+                    if (correctStreak >= 2) {
+                        updatedWord.difficulty = 'Medium';
+                    }
                     break;
                 case 'Medium':
-                    newStats.difficulty = 'Easy';
+                    if (correctStreak >= 2) {
+                        updatedWord.difficulty = 'Easy';
+                    }
                     break;
                 case 'Easy':
-                    // Stays Easy
+                    if (correctStreak >= 3) {
+                        updatedWord.difficulty = 'Learned';
+                    }
+                    break;
+                case 'Learned':
+                    // Stays Learned on correct revision
                     break;
             }
-        } else {
-            // If wrong, it always becomes Hard
-            newStats.difficulty = 'Hard';
+        } else { // If wrong
+            switch (currentDifficulty) {
+                case 'New':
+                case 'Medium':
+                case 'Easy':
+                    updatedWord.difficulty = 'Hard';
+                    break;
+                case 'Learned': // Wrong on revision
+                    updatedWord.difficulty = 'Medium';
+                    break;
+                case 'Hard':
+                    // Stays Hard
+                    break;
+            }
         }
     
-        await updateWord(newStats as Word);
+        await updateWord(updatedWord as Word);
         setFeedback({ isCorrect, correctAnswer, userAnswer, quizType });
         setState('feedback');
     };
@@ -290,9 +315,9 @@ function LearningClientInternal() {
     };
 
     const difficultyOptions: { value: DifficultyFilter, label: string }[] = [
-        { value: 'All', label: 'All Words' },
+        { value: 'All', label: 'All Words (Revise)' },
         { value: "Today's", label: "Today's Words" },
-        { value: 'Learned', label: 'Learned Words' },
+        { value: 'Learned', label: 'Learned (Revision)' },
         { value: 'Easy', label: 'Easy Words' },
         { value: 'Medium', label: 'Medium Words' },
         { value: 'Hard', label: 'Hard Words' },
@@ -518,5 +543,3 @@ function FinishedState({ onRestart }: { onRestart: () => void }) {
         </div>
     )
 }
-
-    

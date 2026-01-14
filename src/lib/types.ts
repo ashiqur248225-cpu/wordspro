@@ -38,7 +38,7 @@ export type Word = {
   antonyms?: (string | Antonym)[];
   exampleSentences?: string[];
   verb_forms?: VerbForms | null;
-  difficulty: 'New' | 'Easy' | 'Medium' | 'Hard';
+  difficulty: 'New' | 'Easy' | 'Medium' | 'Hard' | 'Learned';
   
   // System-managed stats
   wrong_count?: {
@@ -47,6 +47,7 @@ export type Word = {
   };
   correct_count?: number;
   total_exams?: number;
+  correct_streak?: number;
 
   createdAt: string;
   updatedAt: string;
@@ -61,7 +62,7 @@ export type Note = {
   updatedAt: string;
 };
 
-export type WordDifficulty = 'New' | 'Easy' | 'Medium' | 'Hard';
+export type WordDifficulty = 'New' | 'Easy' | 'Medium' | 'Hard' | 'Learned';
 
 export const partOfSpeechOptions: Word['partOfSpeech'][] = [
   'noun',
