@@ -1,12 +1,12 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAllWords } from '@/lib/db';
 import type { Word } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { ArrowUpDown, BookOpen } from 'lucide-react';
+import { ArrowUpDown, BookOpen, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   ColumnDef,
@@ -18,6 +18,15 @@ import {
   SortingState,
   getFilteredRowModel,
 } from "@tanstack/react-table"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 import {
   Table,
@@ -28,12 +37,14 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
+type ErrorTypeFilter = 'all' | 'spelling' | 'meaning' | 'synonym-antonym';
 
 export default function MistakenWordsPage() {
-    const [words, setWords] = useState<Word[]>([]);
+    const [allMistakenWords, setAllMistakenWords] = useState<Word[]>([]);
     const [loading, setLoading] = useState(true);
     const [sorting, setSorting] = useState<SortingState>([{ id: 'totalWrongs', desc: true }]);
     const [globalFilter, setGlobalFilter] = useState('');
+    const [errorTypeFilter, setErrorTypeFilter] = useState<ErrorTypeFilter>('all');
     const router = useRouter();
 
     useEffect(() => {
@@ -43,11 +54,12 @@ export default function MistakenWordsPage() {
                 const mistakenWords = allWords
                     .map(word => ({
                         ...word,
-                        totalWrongs: (word.wrong_count?.spelling || 0) + (word.wrong_count?.meaning || 0)
+                        totalWrongs: (word.wrong_count?.spelling || 0) + (word.wrong_count?.meaning || 0) + (word.wrong_count?.synonym || 0) + (word.wrong_count?.antonym || 0),
+                        totalSynonymAntonymWrongs: (word.wrong_count?.synonym || 0) + (word.wrong_count?.antonym || 0)
                     }))
                     .filter(word => word.totalWrongs > 0);
                 
-                setWords(mistakenWords);
+                setAllMistakenWords(mistakenWords);
             } catch (error) {
                 console.error("Failed to fetch mistaken words:", error);
             } finally {
@@ -56,8 +68,18 @@ export default function MistakenWordsPage() {
         }
         fetchMistakenWords();
     }, []);
+    
+    const filteredWords = useMemo(() => {
+        return allMistakenWords.filter(word => {
+            if (errorTypeFilter === 'all') return true;
+            if (errorTypeFilter === 'spelling') return (word.wrong_count?.spelling || 0) > 0;
+            if (errorTypeFilter === 'meaning') return (word.wrong_count?.meaning || 0) > 0;
+            if (errorTypeFilter === 'synonym-antonym') return ((word.wrong_count?.synonym || 0) + (word.wrong_count?.antonym || 0)) > 0;
+            return true;
+        });
+    }, [allMistakenWords, errorTypeFilter]);
 
-    const columns: ColumnDef<Word & { totalWrongs: number }>[] = [
+    const columns: ColumnDef<(Word & { totalWrongs: number, totalSynonymAntonymWrongs: number })>[] = [
         {
             accessorKey: 'word',
             header: 'Word',
@@ -113,11 +135,25 @@ export default function MistakenWordsPage() {
                 </Button>
             ),
             cell: ({ row }) => <div className="text-center">{row.original.wrong_count?.meaning || 0}</div>
+        },
+        {
+            accessorKey: 'totalSynonymAntonymWrongs',
+            header: ({ column }) => (
+                <Button
+                    variant="ghost"
+                    onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                     className="text-center w-full"
+                >
+                    Syn/Ant Errors
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+            ),
+            cell: ({ row }) => <div className="text-center">{row.original.totalSynonymAntonymWrongs}</div>
         }
     ];
 
     const table = useReactTable({
-        data: words,
+        data: filteredWords,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
@@ -147,7 +183,7 @@ export default function MistakenWordsPage() {
                     <p className="text-muted-foreground">A complete list of words you've made mistakes on.</p>
                 </div>
             </div>
-            {words.length === 0 ? (
+            {allMistakenWords.length === 0 ? (
                  <div className="flex h-[450px] shrink-0 items-center justify-center rounded-md border border-dashed">
                     <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
                         <BookOpen className="h-10 w-10 text-muted-foreground" />
@@ -159,13 +195,31 @@ export default function MistakenWordsPage() {
                 </div>
             ) : (
                 <div>
-                     <div className="flex items-center py-4">
+                     <div className="flex items-center py-4 gap-2">
                         <Input
-                        placeholder="Filter words..."
-                        value={globalFilter}
-                        onChange={(event) => setGlobalFilter(event.target.value)}
-                        className="max-w-sm"
+                            placeholder="Filter words..."
+                            value={globalFilter}
+                            onChange={(event) => setGlobalFilter(event.target.value)}
+                            className="max-w-sm"
                         />
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-10 gap-1">
+                                    <Filter className="h-3.5 w-3.5" />
+                                    <span className="hidden sm:inline">Filter</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-[200px]">
+                                <DropdownMenuLabel>Filter by Error Type</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuRadioGroup value={errorTypeFilter} onValueChange={(v) => setErrorTypeFilter(v as ErrorTypeFilter)}>
+                                    <DropdownMenuRadioItem value="all">All Errors</DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem value="spelling">Spelling Errors</DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem value="meaning">Meaning Errors</DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem value="synonym-antonym">Synonym/Antonym Errors</DropdownMenuRadioItem>
+                                </DropdownMenuRadioGroup>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                     <div className="rounded-md border">
                         <Table>
