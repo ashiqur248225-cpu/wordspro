@@ -19,22 +19,20 @@ interface PerformanceStats {
     totalCorrect: number;
     totalWrong: number;
     overallAccuracy: number;
-    errorDistribution: { name: string; value: number }[];
+    errorDistribution: { name: string; value: number, fill: string }[];
     mostMistakenWords: Word[];
     performanceOverTime: { date: string; accuracy: number }[];
 }
 
 type TimeFrame = 'daily' | 'weekly' | 'monthly';
 
-const COLORS = ['hsl(var(--chart-5))', 'hsl(var(--chart-3))'];
-
 const errorChartConfig = {
 	'Spelling Errors': {
-		label: 'Spelling',
+		label: 'Spelling Errors',
 		color: 'hsl(var(--chart-5))',
 	},
 	'Meaning Errors': {
-		label: 'Meaning',
+		label: 'Meaning Errors',
 		color: 'hsl(var(--chart-3))',
 	},
 };
@@ -100,8 +98,8 @@ export function PerformanceClient() {
                 const overallAccuracy = totalExams > 0 ? (totalCorrect / totalExams) * 100 : 0;
                 
                 const errorDistribution = [
-                    { name: 'Spelling Errors', value: spellingErrors },
-                    { name: 'Meaning Errors', value: meaningErrors },
+                    { name: 'Spelling Errors', value: spellingErrors, fill: errorChartConfig['Spelling Errors'].color },
+                    { name: 'Meaning Errors', value: meaningErrors, fill: errorChartConfig['Meaning Errors'].color },
                 ];
 
                 const mostMistakenWords = words
@@ -239,12 +237,11 @@ export function PerformanceClient() {
                                         cy="50%"
                                         labelLine={false}
                                         outerRadius={80}
-                                        fill="#8884d8"
                                         dataKey="value"
                                         label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                                     >
-                                        {stats.errorDistribution.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        {stats.errorDistribution.map((entry) => (
+                                            <Cell key={entry.name} fill={entry.fill} />
                                         ))}
                                     </Pie>
                                     <ChartTooltip
