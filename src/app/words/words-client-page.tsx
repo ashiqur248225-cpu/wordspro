@@ -350,12 +350,12 @@ function WordsClientContent() {
 
   const handleBulkImport = async () => {
     if (!importJson.trim()) {
-      toast({
-          variant: 'destructive',
-          title: 'Input Required',
-          description: 'Please paste the JSON content to import.',
-      });
-      return;
+        toast({
+            variant: 'destructive',
+            title: 'Input Required',
+            description: 'Please paste the JSON content to import.',
+        });
+        return;
     }
     try {
         const jsonData = JSON.parse(importJson);
@@ -403,6 +403,20 @@ function WordsClientContent() {
       }
       // Instead of passing IDs, we can just pass the difficulty filter
       router.push(`/learn?quizType=${quizType}&difficulty=${difficultyFilter}`);
+  };
+
+  const handleRowClick = (word: Word) => {
+    const query = new URLSearchParams();
+    if (difficultyFilter !== 'All') {
+      query.set('difficulty', difficultyFilter);
+    }
+    if (posFilter !== 'All') {
+      query.set('pos', posFilter);
+    }
+    if (searchTerm) {
+      query.set('q', searchTerm);
+    }
+    router.push(`/words/${word.id}?${query.toString()}`);
   };
   
   const pageTitle = `Words List (${filteredWords.length})`;
@@ -631,7 +645,7 @@ function WordsClientContent() {
                     {filteredWords.length > 0 ? filteredWords.map(word => (
                         <TableRow 
                             key={word.id} 
-                            onClick={() => router.push(`/words/${word.id}`)}
+                            onClick={() => handleRowClick(word)}
                             className="cursor-pointer"
                         >
                             <TableCell className="font-medium">{word.word}</TableCell>

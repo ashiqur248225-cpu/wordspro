@@ -1,9 +1,8 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
-import { notFound, useParams, useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { notFound, useParams, useRouter, useSearchParams } from 'next/navigation';
 import { getWord, getAllWords } from '@/lib/db';
 import type { Word, VerbFormDetail, Synonym, Antonym } from '@/lib/types';
-import { PageTemplate } from '@/components/page-template';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,13 +27,15 @@ function DetailCard({ title, children }: { title: string; children: React.ReactN
   );
 }
 
-export default function WordDetailsPage() {
+
+function WordDetailsPageInternal() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   
   const [word, setWord] = useState<Word | null>(null);
-  const [allWordIds, setAllWordIds] = useState<string[]>([]);
+  const [filteredWordIds, setFilteredWordIds] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
@@ -162,36 +163,71 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
   }, [id]);
 
   useEffect(() => {
-    const fetchAllWordIds = async () => {
+    const fetchAndFilterWords = async () => {
         try {
-            const allWords = await getAllWords();
-            // Sorting by creation date to have a consistent order
-            const sortedWords = allWords.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            let allWords = await getAllWords();
+            const difficultyFilter = searchParams.get('difficulty');
+            const posFilter = searchParams.get('pos');
+            const searchTerm = searchParams.get('q');
+            
+            if (searchTerm) {
+                const lowercasedFilter = searchTerm.toLowerCase();
+                allWords = allWords.filter(word => {
+                    if (word.word.toLowerCase().includes(lowercasedFilter)) return true;
+                    if (word.meaning.toLowerCase().includes(lowercasedFilter)) return true;
+                    if (word.verb_forms) {
+                        if (word.verb_forms.v1_present?.word?.toLowerCase().includes(lowercasedFilter)) return true;
+                        if (word.verb_forms.v2_past?.word?.toLowerCase().includes(lowercasedFilter)) return true;
+                        if (word.verb_forms.v3_past_participle?.word?.toLowerCase().includes(lowercasedFilter)) return true;
+                    }
+                    if (word.synonyms?.some(syn => (typeof syn === 'string' ? syn : syn.word).toLowerCase().includes(lowercasedFilter))) return true;
+                    if (word.antonyms?.some(ant => (typeof ant === 'string' ? ant : ant.word).toLowerCase().includes(lowercasedFilter))) return true;
+                    return false;
+                });
+            }
+
+            if (difficultyFilter && difficultyFilter !== 'All') {
+                const today = new Date().toDateString();
+                allWords = allWords.filter(word => {
+                    if (difficultyFilter === "Today's") return new Date(word.createdAt).toDateString() === today;
+                    if (difficultyFilter === "Learned") return word.difficulty === 'Easy';
+                    return word.difficulty === difficultyFilter;
+                });
+            }
+
+            if (posFilter && posFilter !== 'All') {
+                allWords = allWords.filter(word => word.partOfSpeech === posFilter);
+            }
+
+            const sortedWords = allWords.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
             const ids = sortedWords.map(w => w.id);
-            setAllWordIds(ids);
+            setFilteredWordIds(ids);
+
         } catch(e) {
-            console.error("Could not fetch word list for navigation", e);
+            console.error("Could not fetch and filter word list for navigation", e);
         }
     };
 
     fetchWordData();
-    fetchAllWordIds();
-  }, [id, fetchWordData]);
+    fetchAndFilterWords();
+  }, [id, fetchWordData, searchParams]);
 
   useEffect(() => {
-    if (word && allWordIds.length > 0) {
-        const index = allWordIds.indexOf(word.id);
+    if (word && filteredWordIds.length > 0) {
+        const index = filteredWordIds.indexOf(word.id);
         setCurrentIndex(index);
     }
     setLoading(false);
-  }, [word, allWordIds]);
+  }, [word, filteredWordIds]);
 
   const navigateToWord = (index: number) => {
-    if (index >= 0 && index < allWordIds.length) {
-      const nextId = allWordIds[index];
-      router.push(`/words/${nextId}`);
+    if (index >= 0 && index < filteredWordIds.length) {
+      const nextId = filteredWordIds[index];
+      const currentQuery = new URLSearchParams(Array.from(searchParams.entries()));
+      router.push(`/words/${nextId}?${currentQuery.toString()}`);
     }
   };
+
 
   if (loading) {
     return (
@@ -359,11 +395,19 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
                 <Button variant="outline" onClick={() => navigateToWord(currentIndex - 1)} disabled={currentIndex <= 0}>
                     <ArrowLeft className="mr-2" /> Previous Word
                 </Button>
-                <Button variant="outline" onClick={() => navigateToWord(currentIndex + 1)} disabled={currentIndex >= allWordIds.length - 1}>
+                <Button variant="outline" onClick={() => navigateToWord(currentIndex + 1)} disabled={currentIndex >= filteredWordIds.length - 1}>
                     Next Word <ArrowRight className="ml-2" />
                 </Button>
             </div>
         </div>
     </div>
   );
+}
+
+export default function WordDetailsPage() {
+    return (
+        <Suspense fallback={<div className="p-4 md:p-6"><Skeleton className="h-screen w-full" /></div>}>
+            <WordDetailsPageInternal />
+        </Suspense>
+    )
 }
