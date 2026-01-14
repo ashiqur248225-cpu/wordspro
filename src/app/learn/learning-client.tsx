@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { getWordsByDifficulty, getAllWords, updateWord } from '@/lib/db';
-import type { Word, WordDifficulty, VerbFormDetail } from '@/lib/types';
+import type { Word, WordDifficulty, VerbFormDetail, Synonym, Antonym } from '@/lib/types';
 import { McqEnBnQuiz } from '../quiz/mcq-en-bn';
 import { McqBnEnQuiz } from '../quiz/mcq-bn-en';
 import { SpellingQuiz } from '../quiz/spelling-quiz';
@@ -193,7 +193,7 @@ function LearningClientInternal() {
             }
             // No difficulty change for synonym/antonym quizzes
             await updateWord(updatedWord as Word);
-            setFeedback({ isCorrect, correctAnswer, userAnswer, quizType });
+            setFeedback({ isCorrect, correctAnswer, userAnswer, quizType, quizSubtype });
             setState('feedback');
             return;
         }
@@ -263,7 +263,7 @@ function LearningClientInternal() {
         }
     
         await updateWord(updatedWord as Word);
-        setFeedback({ isCorrect, correctAnswer, userAnswer, quizType });
+        setFeedback({ isCorrect, correctAnswer, userAnswer, quizType, quizSubtype });
         setState('feedback');
     };
 
@@ -454,6 +454,78 @@ function LoadingState() {
     )
 }
 
+
+function SynonymAntonymItem({ item, isCorrectAnswer }: { item: string | Synonym | Antonym, isCorrectAnswer: boolean }) {
+    const word = typeof item === 'string' ? item : item.word;
+    const bangla = typeof item !== 'string' ? item.bangla : undefined;
+
+    return (
+        <Badge 
+            variant={isCorrectAnswer ? "default" : "secondary"}
+            className="text-base px-3 py-1 flex items-center justify-between gap-2"
+        >
+            <span>{word}</span>
+            {bangla && <span className="text-sm text-muted-foreground">({bangla})</span>}
+        </Badge>
+    );
+};
+
+function SynonymAntonymFeedback({ feedback, word }: { feedback: AnswerFeedback, word: Word }) {
+    const correctAnswer = typeof feedback.correctAnswer === 'string' ? feedback.correctAnswer : '';
+    
+    return (
+        <div className="space-y-4 text-left">
+            <Card className="bg-card/50">
+                <CardHeader>
+                    <CardTitle className="text-center">Word: {word.word}</CardTitle>
+                    <CardDescription className="text-center">Meaning: {word.meaning}</CardDescription>
+                </CardHeader>
+            </Card>
+
+            {word.synonyms && word.synonyms.length > 0 && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Synonyms</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-wrap gap-2">
+                        {word.synonyms.map((syn, i) => {
+                            const synWord = typeof syn === 'string' ? syn : syn.word;
+                            return (
+                                <SynonymAntonymItem 
+                                    key={i} 
+                                    item={syn}
+                                    isCorrectAnswer={feedback.quizSubtype === 'synonym' && synWord === correctAnswer}
+                                />
+                            )
+                        })}
+                    </CardContent>
+                </Card>
+            )}
+
+             {word.antonyms && word.antonyms.length > 0 && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Antonyms</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-wrap gap-2">
+                        {word.antonyms.map((ant, i) => {
+                            const antWord = typeof ant === 'string' ? ant : ant.word;
+                             return (
+                                <SynonymAntonymItem 
+                                    key={i} 
+                                    item={ant}
+                                    isCorrectAnswer={feedback.quizSubtype === 'antonym' && antWord === correctAnswer}
+                                />
+                            )
+                        })}
+                    </CardContent>
+                </Card>
+            )}
+        </div>
+    );
+}
+
+
 function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, word: Word, onNext: () => void }) {
     
     const VerbFormRow = ({ label, verbData }: { label: string, verbData?: VerbFormDetail}) => {
@@ -496,18 +568,32 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
             </Table>
         );
     }
-
-    const renderCorrectAnswer = () => {
-        if(feedback.quizType === 'synonym-antonym') {
-            return <p className="text-3xl font-bold text-primary">{typeof feedback.correctAnswer === 'string' ? feedback.correctAnswer : ''}</p>
-        }
-        return (
-            <>
-                <p className="text-3xl font-bold text-primary">{word.word}</p>
-                <p className="text-xl text-muted-foreground">"{word.meaning}"</p>
-            </>
+    
+    if (feedback.quizType === 'synonym-antonym') {
+         return (
+            <div className="text-center space-y-6 p-4 max-w-2xl mx-auto">
+                 <div className="flex flex-col items-center gap-2">
+                    {feedback.isCorrect ? 
+                        <CheckCircle className="h-16 w-16 text-green-500" /> : 
+                        <XCircle className="h-16 w-16 text-red-500" />
+                    }
+                    <h2 className="text-3xl font-bold">{feedback.isCorrect ? 'Correct!' : 'Incorrect'}</h2>
+                </div>
+                <SynonymAntonymFeedback feedback={feedback} word={word} />
+                <div className="flex flex-col sm:flex-row gap-2 justify-center pt-4">
+                    <Button onClick={onNext} className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90">
+                        Next Word <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" asChild className="w-full sm:w-auto">
+                        <Link href={`/words/${word.id}`}>
+                            View Details <BookOpen className="ml-2 h-4 w-4" />
+                        </Link>
+                    </Button>
+                </div>
+            </div>
         )
     }
+
 
     return (
         <div className="text-center space-y-6 p-4 max-w-2xl mx-auto">
@@ -524,7 +610,8 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
                     <CardTitle className="text-center">Correct Answer</CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 text-center">
-                   {renderCorrectAnswer()}
+                    <p className="text-3xl font-bold text-primary">{word.word}</p>
+                    <p className="text-xl text-muted-foreground">"{word.meaning}"</p>
                 </CardContent>
             </Card>
 
