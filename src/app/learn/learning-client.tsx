@@ -203,9 +203,13 @@ function LearningClientInternal() {
             updatedWord.correct_streak = (updatedWord.correct_streak || 0) + 1;
         } else {
             updatedWord.correct_streak = 0; // Reset streak on wrong answer
-            if (['spelling', 'mcq-bn-en', 'fill-blanks', 'verb-form'].includes(quizType)) {
+            
+            const spellingErrorTypes: ExamType[] = ['spelling', 'fill-blanks', 'verb-form'];
+            const meaningErrorTypes: ExamType[] = ['mcq-bn-en', 'mcq-en-bn'];
+
+            if (spellingErrorTypes.includes(quizType)) {
                 updatedWord.wrong_count.spelling = (updatedWord.wrong_count.spelling || 0) + 1;
-            } else { // mcq-en-bn
+            } else if (meaningErrorTypes.includes(quizType)) {
                 updatedWord.wrong_count.meaning = (updatedWord.wrong_count.meaning || 0) + 1;
             }
         }
@@ -217,7 +221,6 @@ function LearningClientInternal() {
             switch (currentDifficulty) {
                 case 'New':
                     updatedWord.difficulty = 'Medium';
-                    updatedWord.correct_streak = 1; 
                     break;
                 case 'Hard':
                      if (correctStreak >= 2) {
@@ -240,7 +243,7 @@ function LearningClientInternal() {
             }
         } else { // If wrong
              switch (currentDifficulty) {
-                case 'Learned':
+                case 'Learned': // Demotion from Learned
                     updatedWord.difficulty = 'Medium';
                     break;
                 case 'Easy':
