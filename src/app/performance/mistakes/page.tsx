@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAllWords } from '@/lib/db';
 import type { Word } from '@/lib/types';
-import { PageTemplate } from '@/components/page-template';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -134,14 +133,20 @@ export default function MistakenWordsPage() {
 
     if (loading) {
         return (
-             <PageTemplate title="Mistaken Words" description="Loading your list of mistaken words...">
+             <div className="p-4 md:p-6">
                  <div className="h-64 w-full bg-muted animate-pulse rounded-lg"></div>
-             </PageTemplate>
+             </div>
         )
     }
 
     return (
-        <PageTemplate title="All Mistaken Words" description="A complete list of words you've made mistakes on.">
+         <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold">All Mistaken Words</h1>
+                    <p className="text-muted-foreground">A complete list of words you've made mistakes on.</p>
+                </div>
+            </div>
             {words.length === 0 ? (
                  <div className="flex h-[450px] shrink-0 items-center justify-center rounded-md border border-dashed">
                     <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
@@ -228,6 +233,6 @@ export default function MistakenWordsPage() {
                     </div>
                 </div>
             )}
-        </PageTemplate>
+        </div>
     );
 }
