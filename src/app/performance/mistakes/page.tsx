@@ -140,7 +140,7 @@ export default function MistakenWordsPage() {
     }
 
     return (
-         <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
+         <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6 overflow-x-auto">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold">All Mistaken Words</h1>
