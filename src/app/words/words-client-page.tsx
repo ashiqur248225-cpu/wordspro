@@ -145,21 +145,24 @@ function WordsClientContent() {
   const [importJson, setImportJson] = useState('');
   const [wordToDelete, setWordToDelete] = useState<string | null>(null);
   
-  const [searchTerm, setSearchTerm] = useState('');
-  const [difficultyFilter, setDifficultyFilter] = useState<string>('All');
-  const [posFilter, setPosFilter] = useState<string>('All');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
+  const [difficultyFilter, setDifficultyFilter] = useState(searchParams.get('difficulty') || 'All');
+  const [posFilter, setPosFilter] = useState(searchParams.get('pos') || 'All');
   const [isMounted, setIsMounted] = useState(false);
 
 
   const { toast } = useToast();
-  const searchParams = useSearchParams();
-  const router = useRouter();
   
-  const initialDifficultyFilter = searchParams.get('difficulty');
-
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    const difficulty = searchParams.get('difficulty');
+    if (difficulty) {
+        setDifficultyFilter(difficulty);
+    }
+  }, [searchParams]);
 
   const fetchWords = useCallback(async () => {
     try {
@@ -177,12 +180,6 @@ function WordsClientContent() {
   useEffect(() => {
     fetchWords();
   }, [fetchWords]);
-
-  useEffect(() => {
-    if (isMounted && initialDifficultyFilter && ['Easy', 'Medium', 'Hard', 'New', 'All'].includes(initialDifficultyFilter)) {
-        setDifficultyFilter(initialDifficultyFilter);
-    }
-  }, [initialDifficultyFilter, isMounted]);
 
   useEffect(() => {
     let words = allWords;
@@ -231,7 +228,7 @@ function WordsClientContent() {
                 return new Date(word.createdAt).toDateString() === today;
             }
             if (difficultyFilter === "Learned") {
-                return word.difficulty === 'Easy';
+                return word.difficulty === 'Learned';
             }
             return word.difficulty === difficultyFilter;
         });
@@ -285,9 +282,10 @@ function WordsClientContent() {
             const newWordData: Omit<Word, 'id' | 'createdAt' | 'updatedAt'> = {
                 ...payload,
                 difficulty: 'New',
-                wrong_count: { spelling: 0, meaning: 0 },
+                wrong_count: { spelling: 0, meaning: 0, synonym: 0, antonym: 0 },
                 correct_count: 0,
                 total_exams: 0,
+                correct_streak: 0,
             };
             await addWord(newWordData);
             toast({ title: 'Word added successfully' });
@@ -698,5 +696,3 @@ export function WordsClientPage() {
         </Suspense>
     )
 }
-
-    
