@@ -50,7 +50,7 @@ export function NotesClientPage() {
   const fetchNotes = useCallback(async () => {
     try {
       const allNotes = await getAllNotes();
-      setNotes(allNotes.sort((a, b) => b.id - a.id));
+      setNotes(allNotes.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -118,6 +118,14 @@ export function NotesClientPage() {
   }
 
   const handleBulkImport = async () => {
+    if (!importJson.trim()) {
+      toast({
+          variant: 'destructive',
+          title: 'Input Required',
+          description: 'Please paste the JSON content to import.',
+      });
+      return;
+    }
     try {
         const jsonData = JSON.parse(importJson);
         const parsedData = bulkImportSchema.parse(jsonData);

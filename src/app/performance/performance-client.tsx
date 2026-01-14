@@ -10,6 +10,7 @@ import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { AlertCircle, CheckCircle, Target, BookOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 interface PerformanceStats {
     totalExams: number;
@@ -24,14 +25,14 @@ interface PerformanceStats {
 const COLORS = ['hsl(var(--chart-5))', 'hsl(var(--chart-3))'];
 
 const errorChartConfig = {
-    'Spelling Errors': {
-      label: 'Spelling',
-      color: 'hsl(var(--chart-5))',
-    },
-    'Meaning Errors': {
-      label: 'Meaning',
-      color: 'hsl(var(--chart-3))',
-    },
+	'Spelling Errors': {
+		label: 'Spelling',
+		color: 'hsl(var(--chart-5))',
+	},
+	'Meaning Errors': {
+		label: 'Meaning',
+		color: 'hsl(var(--chart-3))',
+	},
 };
 
 const accuracyChartConfig = {
