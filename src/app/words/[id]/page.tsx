@@ -367,7 +367,7 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
                 {word.exampleSentences && word.exampleSentences.length > 0 && (
                   <DetailCard title="Example Sentences">
                       <ul className="list-disc list-inside space-y-2">
-                          {word.exampleSentences?.map((sentence, i) => <li key={i} className="text-lg">"{sentence}"</li>)}
+                          {word.exampleSentences?.map((sentence, i) => <li key={i} key={i} className="text-lg">"{sentence}"</li>)}
                       </ul>
                   </DetailCard>
                 )}

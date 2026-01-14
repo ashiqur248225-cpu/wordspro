@@ -439,7 +439,6 @@ function WordsClientContent() {
   ]
 
   return (
-    <Suspense fallback={<div>Loading Words...</div>}>
     <div className="p-4 md:p-6 overflow-x-auto">
         <header className="flex items-center justify-between mb-4">
             <div>
@@ -687,7 +686,6 @@ function WordsClientContent() {
             </Table>
         </div>
     </div>
-    </Suspense>
   );
 }
 
