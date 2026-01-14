@@ -195,7 +195,7 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
 
   if (loading) {
     return (
-      <PageTemplate title="Loading..." description="Fetching word details.">
+      <div className="p-4 md:p-6">
           <div className="space-y-4">
               <Skeleton className="h-12 w-1/4" />
               <Skeleton className="h-8 w-1/6" />
@@ -205,7 +205,7 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
                 <Skeleton className="h-48 w-full" />
               </div>
           </div>
-      </PageTemplate>
+      </div>
     );
   }
 
@@ -216,7 +216,7 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
   const hasVerbForms = word.verb_forms && (word.verb_forms.v1_present?.word || word.verb_forms.v2_past?.word || word.verb_forms.v3_past_participle?.word);
 
   return (
-    <PageTemplate title={word.word} description={word.partOfSpeech}>
+    <div className="p-4 md:p-6">
         <div className="max-w-4xl mx-auto">
             <div className="flex justify-between items-start mb-6">
                 <div>
@@ -364,6 +364,6 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
                 </Button>
             </div>
         </div>
-    </PageTemplate>
+    </div>
   );
 }
