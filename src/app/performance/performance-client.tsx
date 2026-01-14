@@ -11,6 +11,8 @@ import { AlertCircle, CheckCircle, Target, BookOpen, ArrowRight } from 'lucide-r
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { format, startOfWeek, startOfMonth } from 'date-fns';
 
 interface PerformanceStats {
     totalExams: number;
@@ -21,6 +23,8 @@ interface PerformanceStats {
     mostMistakenWords: Word[];
     performanceOverTime: { date: string; accuracy: number }[];
 }
+
+type TimeFrame = 'daily' | 'weekly' | 'monthly';
 
 const COLORS = ['hsl(var(--chart-5))', 'hsl(var(--chart-3))'];
 
@@ -43,6 +47,7 @@ const accuracyChartConfig = {
 export function PerformanceClient() {
     const [stats, setStats] = useState<PerformanceStats | null>(null);
     const [loading, setLoading] = useState(true);
+    const [timeFrame, setTimeFrame] = useState<TimeFrame>('daily');
     const router = useRouter();
 
     useEffect(() => {
@@ -56,7 +61,7 @@ export function PerformanceClient() {
                 let spellingErrors = 0;
                 let meaningErrors = 0;
                 
-                const dailyPerformance: { [key: string]: { correct: number; total: number } } = {};
+                const performanceData: { [key: string]: { correct: number; total: number } } = {};
 
                 words.forEach(word => {
                     const exams = word.total_exams || 0;
@@ -69,15 +74,24 @@ export function PerformanceClient() {
                     spellingErrors += word.wrong_count?.spelling || 0;
                     meaningErrors += word.wrong_count?.meaning || 0;
 
-                    // For performance over time, we'd need historical exam data.
-                    // Let's simulate with `updatedAt` for now, assuming updates relate to exams.
                      if (exams > 0) {
-                        const date = new Date(word.updatedAt).toLocaleDateString();
-                        if (!dailyPerformance[date]) {
-                            dailyPerformance[date] = { correct: 0, total: 0 };
+                        const date = new Date(word.updatedAt);
+                        let key = '';
+                        if (timeFrame === 'daily') {
+                            key = date.toLocaleDateString();
+                        } else if (timeFrame === 'weekly') {
+                            key = format(startOfWeek(date), 'yyyy-MM-dd');
+                        } else { // monthly
+                            key = format(startOfMonth(date), 'yyyy-MM-01');
                         }
-                        dailyPerformance[date].correct += word.correct_count || 0;
-                        dailyPerformance[date].total += exams;
+                        
+                        if (!performanceData[key]) {
+                            performanceData[key] = { correct: 0, total: 0 };
+                        }
+                        // This logic is a simplification, ideally we'd have exam history.
+                        // Assuming last update reflects recent exam activity.
+                        performanceData[key].correct += word.correct_count || 0;
+                        performanceData[key].total += exams;
                     }
                 });
 
@@ -97,12 +111,21 @@ export function PerformanceClient() {
                     })
                     .slice(0, 10);
                 
-                const performanceOverTime = Object.entries(dailyPerformance)
-                    .map(([date, data]) => ({
-                        date,
-                        accuracy: data.total > 0 ? (data.correct / data.total) * 100 : 0,
-                    }))
-                    .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                const performanceOverTime = Object.entries(performanceData)
+                    .map(([dateKey, data]) => {
+                         let formattedDate = dateKey;
+                        if (timeFrame === 'weekly') {
+                           formattedDate = `Week of ${format(new Date(dateKey), 'MMM d')}`;
+                        } else if (timeFrame === 'monthly') {
+                            formattedDate = format(new Date(dateKey), 'MMM yyyy');
+                        }
+                        return {
+                            date: formattedDate,
+                            accuracy: data.total > 0 ? (data.correct / data.total) * 100 : 0,
+                            originalDate: new Date(dateKey)
+                        };
+                    })
+                    .sort((a,b) => a.originalDate.getTime() - b.originalDate.getTime());
 
                 setStats({
                     totalExams,
@@ -121,7 +144,7 @@ export function PerformanceClient() {
         }
 
         fetchPerformanceData();
-    }, []);
+    }, [timeFrame]);
 
     if (loading) {
         return (
@@ -230,9 +253,18 @@ export function PerformanceClient() {
                 </Card>
                 
                  <Card>
-                    <CardHeader>
-                        <CardTitle>Performance Over Time</CardTitle>
-                        <CardDescription>Your accuracy trend.</CardDescription>
+                    <CardHeader className="flex flex-row justify-between items-center">
+                        <div>
+                            <CardTitle>Performance Over Time</CardTitle>
+                            <CardDescription>Your accuracy trend.</CardDescription>
+                        </div>
+                         <Tabs defaultValue="daily" onValueChange={(value) => setTimeFrame(value as TimeFrame)} className="w-auto">
+                            <TabsList>
+                                <TabsTrigger value="daily">Daily</TabsTrigger>
+                                <TabsTrigger value="weekly">Weekly</TabsTrigger>
+                                <TabsTrigger value="monthly">Monthly</TabsTrigger>
+                            </TabsList>
+                        </Tabs>
                     </CardHeader>
                     <CardContent>
                         <ChartContainer config={accuracyChartConfig} className="h-[250px] w-full">
