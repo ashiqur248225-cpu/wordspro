@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { format, startOfWeek, startOfMonth } from 'date-fns';
+import { format, startOfWeek, endOfWeek, startOfMonth, parseISO } from 'date-fns';
 
 interface PerformanceStats {
     totalExams: number;
@@ -74,24 +74,26 @@ export function PerformanceClient() {
                     spellingErrors += word.wrong_count?.spelling || 0;
                     meaningErrors += word.wrong_count?.meaning || 0;
 
-                     if (exams > 0) {
-                        const date = new Date(word.updatedAt);
-                        let key = '';
-                        if (timeFrame === 'daily') {
-                            key = date.toLocaleDateString();
-                        } else if (timeFrame === 'weekly') {
-                            key = format(startOfWeek(date), 'yyyy-MM-dd');
-                        } else { // monthly
-                            key = format(startOfMonth(date), 'yyyy-MM-01');
+                     if (exams > 0 && word.updatedAt) {
+                        try {
+                            const date = parseISO(word.updatedAt);
+                            let key = '';
+                            if (timeFrame === 'daily') {
+                                key = format(date, 'yyyy-MM-dd');
+                            } else if (timeFrame === 'weekly') {
+                                key = format(startOfWeek(date), 'yyyy-MM-dd');
+                            } else { // monthly
+                                key = format(startOfMonth(date), 'yyyy-MM-01');
+                            }
+                            
+                            if (!performanceData[key]) {
+                                performanceData[key] = { correct: 0, total: 0 };
+                            }
+                            performanceData[key].correct += word.correct_count || 0;
+                            performanceData[key].total += exams;
+                        } catch(e) {
+                            console.error("Error parsing date for word:", word.id, word.updatedAt, e);
                         }
-                        
-                        if (!performanceData[key]) {
-                            performanceData[key] = { correct: 0, total: 0 };
-                        }
-                        // This logic is a simplification, ideally we'd have exam history.
-                        // Assuming last update reflects recent exam activity.
-                        performanceData[key].correct += word.correct_count || 0;
-                        performanceData[key].total += exams;
                     }
                 });
 
@@ -114,15 +116,19 @@ export function PerformanceClient() {
                 const performanceOverTime = Object.entries(performanceData)
                     .map(([dateKey, data]) => {
                          let formattedDate = dateKey;
-                        if (timeFrame === 'weekly') {
-                           formattedDate = `Week of ${format(new Date(dateKey), 'MMM d')}`;
+                         const date = parseISO(dateKey);
+                        if (timeFrame === 'daily') {
+                           formattedDate = format(date, 'MMM d');
+                        } else if (timeFrame === 'weekly') {
+                           const weekEnd = endOfWeek(date);
+                           formattedDate = `${format(date, 'MMM d')} - ${format(weekEnd, 'MMM d')}`;
                         } else if (timeFrame === 'monthly') {
-                            formattedDate = format(new Date(dateKey), 'MMM yyyy');
+                            formattedDate = format(date, 'MMM yyyy');
                         }
                         return {
                             date: formattedDate,
                             accuracy: data.total > 0 ? (data.correct / data.total) * 100 : 0,
-                            originalDate: new Date(dateKey)
+                            originalDate: date,
                         };
                     })
                     .sort((a,b) => a.originalDate.getTime() - b.originalDate.getTime());
