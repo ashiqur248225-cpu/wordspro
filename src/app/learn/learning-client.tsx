@@ -159,33 +159,45 @@ function LearningClientInternal() {
 
     const handleAnswer = async ({ isCorrect, userAnswer, correctAnswer, quizType }: { isCorrect: boolean; userAnswer: AnswerFeedback['userAnswer'], correctAnswer: AnswerFeedback['correctAnswer'], quizType: ExamType }) => {
         if (!currentWord) return;
-
+    
         const newStats = { ...currentWord };
-
+    
+        // Update counts
+        newStats.total_exams = (newStats.total_exams || 0) + 1;
         if (isCorrect) {
             newStats.correct_count = (newStats.correct_count || 0) + 1;
-            const currentDifficultyIndex = difficultyLevels.indexOf(newStats.difficulty);
-            if (currentDifficultyIndex > 0) {
-                newStats.difficulty = difficultyLevels[currentDifficultyIndex - 1];
-            }
         } else {
-             const currentDifficultyIndex = difficultyLevels.indexOf(newStats.difficulty);
-            if (currentDifficultyIndex < difficultyLevels.length - 1) {
-                newStats.difficulty = difficultyLevels[currentDifficultyIndex + 1];
-            }
-            
             if (!newStats.wrong_count) {
                 newStats.wrong_count = { spelling: 0, meaning: 0 };
             }
-
-            if (quizType === 'spelling' || quizType === 'mcq-bn-en' || quizType === 'fill-blanks' || quizType === 'verb-form') {
+            if (['spelling', 'mcq-bn-en', 'fill-blanks', 'verb-form'].includes(quizType)) {
                 newStats.wrong_count.spelling = (newStats.wrong_count.spelling || 0) + 1;
             } else {
-                 newStats.wrong_count.meaning = (newStats.wrong_count.meaning || 0) + 1;
+                newStats.wrong_count.meaning = (newStats.wrong_count.meaning || 0) + 1;
             }
         }
-        newStats.total_exams = (newStats.total_exams || 0) + 1;
-
+    
+        // Update difficulty based on the new logic
+        if (isCorrect) {
+            switch (newStats.difficulty) {
+                case 'New':
+                    newStats.difficulty = 'Easy';
+                    break;
+                case 'Hard':
+                    newStats.difficulty = 'Medium';
+                    break;
+                case 'Medium':
+                    newStats.difficulty = 'Easy';
+                    break;
+                case 'Easy':
+                    // Stays Easy
+                    break;
+            }
+        } else {
+            // If wrong, it always becomes Hard
+            newStats.difficulty = 'Hard';
+        }
+    
         await updateWord(newStats as Word);
         setFeedback({ isCorrect, correctAnswer, userAnswer, quizType });
         setState('feedback');
@@ -506,3 +518,5 @@ function FinishedState({ onRestart }: { onRestart: () => void }) {
         </div>
     )
 }
+
+    
