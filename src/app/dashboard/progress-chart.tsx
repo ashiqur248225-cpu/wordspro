@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { getAllWords } from '@/lib/db';
-import type { Word } from '@/lib/types';
+import type { Word, WordDifficulty } from '@/lib/types';
 import { ChartTooltipContent, ChartContainer } from '@/components/ui/chart';
 
 export function ProgressChart() {
@@ -11,6 +11,7 @@ export function ProgressChart() {
         { name: 'Easy', count: 0, fill: 'hsl(var(--chart-2))' },
         { name: 'Medium', count: 0, fill: 'hsl(var(--chart-4))' },
         { name: 'Hard', count: 0, fill: 'hsl(var(--chart-5))' },
+        { name: 'Learned', count: 0, fill: 'hsl(var(--chart-1))' },
     ]);
 
     useEffect(() => {
@@ -18,15 +19,17 @@ export function ProgressChart() {
             try {
                 const words: Word[] = await getAllWords();
                 const counts = words.reduce((acc, word) => {
-                    acc[word.difficulty] = (acc[word.difficulty] || 0) + 1;
+                    const difficulty: WordDifficulty = word.difficulty;
+                    acc[difficulty] = (acc[difficulty] || 0) + 1;
                     return acc;
-                }, {} as Record<Word['difficulty'], number>);
+                }, {} as Record<WordDifficulty, number>);
 
                 setChartData([
                     { name: 'New', count: counts.New || 0, fill: 'hsl(var(--chart-3))' },
                     { name: 'Easy', count: counts.Easy || 0, fill: 'hsl(var(--chart-2))' },
                     { name: 'Medium', count: counts.Medium || 0, fill: 'hsl(var(--chart-4))' },
                     { name: 'Hard', count: counts.Hard || 0, fill: 'hsl(var(--chart-5))' },
+                    { name: 'Learned', count: counts.Learned || 0, fill: 'hsl(var(--chart-1))' },
                 ]);
             } catch (error) {
                 console.error("Failed to fetch chart data:", error);
@@ -50,6 +53,9 @@ export function ProgressChart() {
         },
         Hard: {
             color: 'hsl(var(--chart-5))'
+        },
+        Learned: {
+            color: 'hsl(var(--chart-1))'
         },
     };
 

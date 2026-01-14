@@ -3,13 +3,13 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { getWordsByDifficulty, getAllWords } from '@/lib/db';
-import type { Word } from '@/lib/types';
+import type { Word, WordDifficulty } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowRight } from 'lucide-react';
 
 interface WordReviewCardProps {
-  difficulty: 'Easy' | 'Medium' | 'Hard' | 'New' | 'All';
+  difficulty: 'Easy' | 'Medium' | 'Hard' | 'New' | 'All' | 'Learned';
 }
 
 export function WordReviewCard({ difficulty }: WordReviewCardProps) {
@@ -23,7 +23,7 @@ export function WordReviewCard({ difficulty }: WordReviewCardProps) {
       if (difficulty === 'All') {
         fetchedWords = await getAllWords();
       } else {
-        fetchedWords = await getWordsByDifficulty([difficulty]);
+        fetchedWords = await getWordsByDifficulty([difficulty as WordDifficulty]);
       }
       setWordCount(fetchedWords.length);
     } catch (error) {
@@ -61,6 +61,12 @@ export function WordReviewCard({ difficulty }: WordReviewCardProps) {
         'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700/50 hover:border-blue-400 dark:hover:border-blue-600',
       badge: 'outline',
       description: 'Fresh words added to your list.'
+    },
+    Learned: {
+      color:
+        'bg-indigo-100 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-700/50 hover:border-indigo-400 dark:hover:border-indigo-600',
+      badge: 'secondary',
+      description: 'Words you have mastered.'
     },
     All: {
         color:

@@ -23,10 +23,11 @@ export function StatsCards() {
             try {
                 const words: Word[] = await getAllWords();
                 const totalWords = words.length;
-                const learnedWords = words.filter(w => w.difficulty === 'Easy').length;
+                const learnedWords = words.filter(w => w.difficulty === 'Learned').length;
+                const masteredWords = words.filter(w => w.difficulty === 'Learned' || w.difficulty === 'Easy').length;
                 const wordsToReview = words.filter(w => w.difficulty === 'Hard' || w.difficulty === 'Medium').length;
-                // Accuracy would be calculated from quiz history, which is not implemented yet.
-                const averageAccuracy = totalWords > 0 ? Math.round((learnedWords / totalWords) * 100) : 0;
+                const averageAccuracy = totalWords > 0 ? Math.round((masteredWords / totalWords) * 100) : 0;
+                
                 setStats({ totalWords, learnedWords, averageAccuracy, wordsToReview });
             } catch (error) {
                 console.error("Failed to fetch stats:", error);
@@ -36,7 +37,7 @@ export function StatsCards() {
     }, []);
 
   return (
-    <div className="grid gap-4 grid-cols-2">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Words</CardTitle>
@@ -54,7 +55,7 @@ export function StatsCards() {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.learnedWords}</div>
-          <p className="text-xs text-muted-foreground">marked as 'Easy'</p>
+          <p className="text-xs text-muted-foreground">marked as 'Learned'</p>
         </CardContent>
       </Card>
       <Card>

@@ -40,7 +40,7 @@ interface WordCounts {
     New: number;
 }
 
-const difficultyLevels: WordDifficulty[] = ['Easy', 'Medium', 'Hard'];
+const difficultyLevels: WordDifficulty[] = ['Easy', 'Medium', 'Hard', 'New', 'Learned'];
 
 function LearningClientInternal() {
     const searchParams = useSearchParams();
@@ -104,9 +104,9 @@ function LearningClientInternal() {
             } else if (difficultyFilter === "Today's") {
                 words = allWords.filter(w => new Date(w.createdAt).toDateString() === today);
             } else if (['Learned', 'New', 'Easy', 'Medium', 'Hard'].includes(difficultyFilter)) {
-                words = allWords.filter(w => w.difficulty === difficultyFilter);
+                words = await getWordsByDifficulty([difficultyFilter as WordDifficulty]);
             } else {
-                 words = allWords.filter(w => w.difficulty === 'Hard' || w.difficulty === 'Medium');
+                 words = await getWordsByDifficulty(['Hard', 'Medium']);
             }
             
             const initialTestedIds = new Set<string>();
@@ -161,7 +161,6 @@ function LearningClientInternal() {
     
         const updatedWord = { ...currentWord };
     
-        // 1. Update basic stats
         updatedWord.total_exams = (updatedWord.total_exams || 0) + 1;
         
         if (isCorrect) {
@@ -187,20 +186,24 @@ function LearningClientInternal() {
             switch (currentDifficulty) {
                 case 'New':
                     updatedWord.difficulty = 'Medium';
+                    updatedWord.correct_streak = 1;
                     break;
                 case 'Hard':
-                    if (correctStreak >= 2) {
+                     if (correctStreak >= 2) {
                         updatedWord.difficulty = 'Medium';
+                        updatedWord.correct_streak = 0;
                     }
                     break;
                 case 'Medium':
                     if (correctStreak >= 2) {
                         updatedWord.difficulty = 'Easy';
+                        updatedWord.correct_streak = 0;
                     }
                     break;
                 case 'Easy':
                     if (correctStreak >= 3) {
                         updatedWord.difficulty = 'Learned';
+                        updatedWord.correct_streak = 0;
                     }
                     break;
                 case 'Learned':
@@ -210,17 +213,22 @@ function LearningClientInternal() {
         } else { // If wrong
             switch (currentDifficulty) {
                 case 'New':
-                case 'Medium':
-                case 'Easy':
                     updatedWord.difficulty = 'Hard';
                     break;
-                case 'Learned': // Wrong on revision
+                case 'Medium':
+                    updatedWord.difficulty = 'Hard';
+                    break;
+                case 'Easy':
+                    updatedWord.difficulty = 'Medium';
+                    break;
+                case 'Learned': 
                     updatedWord.difficulty = 'Medium';
                     break;
                 case 'Hard':
                     // Stays Hard
                     break;
             }
+             updatedWord.correct_streak = 0;
         }
     
         await updateWord(updatedWord as Word);
@@ -341,7 +349,7 @@ function LearningClientInternal() {
                     <SelectContent>
                         {difficultyOptions.map(opt => (
                             <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label} {wordCounts && `(${wordCounts[opt.value as keyof WordCounts]})`}
+                                {opt.label} {wordCounts && `(${wordCounts[opt.value as keyof WordCounts] || 0})`}
                             </SelectItem>
                         ))}
                     </SelectContent>
