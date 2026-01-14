@@ -1,13 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { getAllWords } from '@/lib/db';
 import type { Word } from '@/lib/types';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
-import { AlertCircle, CheckCircle, Target, BookOpen } from 'lucide-react';
+import { AlertCircle, CheckCircle, Target, BookOpen, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -218,7 +218,7 @@ export function PerformanceClient() {
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                         ))}
                                     </Pie>
-                                    <Tooltip
+                                    <ChartTooltip
                                         cursor={{fill: 'hsl(var(--muted))'}}
                                         content={<ChartTooltipContent hideLabel />}
                                     />
@@ -291,6 +291,13 @@ export function PerformanceClient() {
                         </TableBody>
                     </Table>
                 </CardContent>
+                 <CardFooter className="justify-end">
+                    <Button asChild variant="link" className="text-primary">
+                        <Link href="/performance/mistakes">
+                            View all mistaken words <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                    </Button>
+                </CardFooter>
             </Card>
         </div>
     );
