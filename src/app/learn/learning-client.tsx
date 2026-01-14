@@ -10,6 +10,7 @@ import { McqBnEnQuiz } from '../quiz/mcq-bn-en';
 import { SpellingQuiz } from '../quiz/spelling-quiz';
 import { FillBlanksQuiz } from '../quiz/fill-in-the-blanks-quiz';
 import { VerbFormQuiz } from '../quiz/verb-form-quiz';
+import { SynonymAntonymQuiz } from '../quiz/synonym-antonym-quiz';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, ArrowRight, BookOpen, Check, X } from 'lucide-react';
@@ -21,13 +22,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 type LearningState = 'loading' | 'testing' | 'feedback' | 'finished';
 type DifficultyFilter = 'All' | "Today's" | 'Hard' | 'Medium' | 'Easy' | 'New' | 'Learned';
-type ExamType = 'dynamic' | 'mcq-en-bn' | 'mcq-bn-en' | 'spelling' | 'fill-blanks' | 'verb-form';
+type ExamType = 'dynamic' | 'mcq-en-bn' | 'mcq-bn-en' | 'spelling' | 'fill-blanks' | 'verb-form' | 'synonym-antonym';
 
 interface AnswerFeedback {
     isCorrect: boolean;
     correctAnswer: string | { v2: string, v3: string };
     userAnswer: string | { v2: string, v3: string };
     quizType: ExamType;
+    quizSubtype?: 'synonym' | 'antonym';
 }
 
 interface WordCounts {
@@ -137,6 +139,10 @@ function LearningClientInternal() {
                 setFallbackMessage("This word is too short for a fill-in-the-blanks test. Switching to MCQ test.");
                 return 'mcq-bn-en';
              }
+              if (examType === 'synonym-antonym' && (!word.synonyms || word.synonyms.length === 0) && (!word.antonyms || word.antonyms.length === 0)) {
+                setFallbackMessage("This word does not have synonyms or antonyms. Switching to MCQ test.");
+                return 'mcq-en-bn';
+            }
              return examType;
         }
 
@@ -147,16 +153,21 @@ function LearningClientInternal() {
 
         if (word.partOfSpeech === 'verb' && word.verb_forms?.v1_present?.word && word.verb_forms?.v2_past?.word) {
             const rand = Math.random();
-            if (rand < 0.33) return 'verb-form';
+            if (rand < 0.25) return 'verb-form';
         }
         
+        if ((word.synonyms && word.synonyms.length > 0) || (word.antonyms && word.antonyms.length > 0)) {
+            const rand = Math.random();
+            if (rand < 0.25) return 'synonym-antonym';
+        }
+
         const rand = Math.random();
         if (rand < 0.33) return 'mcq-bn-en';
         if (rand < 0.66) return 'fill-blanks';
         return 'mcq-en-bn';
     }
 
-    const handleAnswer = async ({ isCorrect, userAnswer, correctAnswer, quizType }: { isCorrect: boolean; userAnswer: AnswerFeedback['userAnswer'], correctAnswer: AnswerFeedback['correctAnswer'], quizType: ExamType }) => {
+    const handleAnswer = async ({ isCorrect, userAnswer, correctAnswer, quizType, quizSubtype }: { isCorrect: boolean; userAnswer: AnswerFeedback['userAnswer'], correctAnswer: AnswerFeedback['correctAnswer'], quizType: ExamType, quizSubtype?: 'synonym' | 'antonym' }) => {
         if (!currentWord) return;
     
         const updatedWord = { ...currentWord };
@@ -165,20 +176,40 @@ function LearningClientInternal() {
         
         if (isCorrect) {
             updatedWord.correct_count = (updatedWord.correct_count || 0) + 1;
+        }
+
+        if (!updatedWord.wrong_count) {
+            updatedWord.wrong_count = { spelling: 0, meaning: 0, synonym: 0, antonym: 0 };
+        }
+        
+        // Handle mistakes for synonym/antonym quiz separately
+        if (quizType === 'synonym-antonym') {
+            if (!isCorrect) {
+                if (quizSubtype === 'synonym') {
+                    updatedWord.wrong_count.synonym = (updatedWord.wrong_count.synonym || 0) + 1;
+                } else if (quizSubtype === 'antonym') {
+                    updatedWord.wrong_count.antonym = (updatedWord.wrong_count.antonym || 0) + 1;
+                }
+            }
+            // No difficulty change for synonym/antonym quizzes
+            await updateWord(updatedWord as Word);
+            setFeedback({ isCorrect, correctAnswer, userAnswer, quizType });
+            setState('feedback');
+            return;
+        }
+
+        // Regular difficulty update logic
+        if (isCorrect) {
             updatedWord.correct_streak = (updatedWord.correct_streak || 0) + 1;
         } else {
             updatedWord.correct_streak = 0; // Reset streak on wrong answer
-            if (!updatedWord.wrong_count) {
-                updatedWord.wrong_count = { spelling: 0, meaning: 0 };
-            }
             if (['spelling', 'mcq-bn-en', 'fill-blanks', 'verb-form'].includes(quizType)) {
                 updatedWord.wrong_count.spelling = (updatedWord.wrong_count.spelling || 0) + 1;
-            } else {
+            } else { // mcq-en-bn
                 updatedWord.wrong_count.meaning = (updatedWord.wrong_count.meaning || 0) + 1;
             }
         }
 
-        // 2. Update difficulty based on the new logic
         const currentDifficulty = updatedWord.difficulty;
         const correctStreak = updatedWord.correct_streak || 0;
 
@@ -186,7 +217,7 @@ function LearningClientInternal() {
             switch (currentDifficulty) {
                 case 'New':
                     updatedWord.difficulty = 'Medium';
-                    updatedWord.correct_streak = 1;
+                    updatedWord.correct_streak = 1; 
                     break;
                 case 'Hard':
                      if (correctStreak >= 2) {
@@ -206,23 +237,20 @@ function LearningClientInternal() {
                         updatedWord.correct_streak = 0;
                     }
                     break;
-                case 'Learned':
-                    // Stays Learned on correct revision
-                    break;
             }
         } else { // If wrong
-            switch (currentDifficulty) {
-                case 'New':
-                    updatedWord.difficulty = 'Hard';
-                    break;
-                case 'Medium':
-                    updatedWord.difficulty = 'Hard';
+             switch (currentDifficulty) {
+                case 'Learned':
+                    updatedWord.difficulty = 'Medium';
                     break;
                 case 'Easy':
                     updatedWord.difficulty = 'Medium';
                     break;
-                case 'Learned': 
-                    updatedWord.difficulty = 'Medium';
+                case 'Medium':
+                    updatedWord.difficulty = 'Hard';
+                    break;
+                case 'New':
+                    updatedWord.difficulty = 'Hard';
                     break;
                 case 'Hard':
                     // Stays Hard
@@ -312,6 +340,17 @@ function LearningClientInternal() {
                         quizType: 'verb-form' 
                     })}
                 />;
+            case 'synonym-antonym':
+                return <SynonymAntonymQuiz
+                    word={currentWord}
+                    onAnswer={(isCorrect, userAnswer, correctAnswer, quizSubtype) => handleAnswer({ 
+                        isCorrect, 
+                        userAnswer, 
+                        correctAnswer, 
+                        quizType: 'synonym-antonym',
+                        quizSubtype
+                    })}
+                />;
             default:
                 return (
                     <div className="text-center p-8">
@@ -339,6 +378,7 @@ function LearningClientInternal() {
         { value: 'spelling', label: 'Spelling Test', disabled: false },
         { value: 'fill-blanks', label: 'Fill-in-the-Blanks', disabled: false },
         { value: 'verb-form', label: 'Verb Form Test', disabled: false },
+        { value: 'synonym-antonym', label: 'Synonym/Antonym', disabled: false },
     ];
 
     return (
@@ -348,7 +388,7 @@ function LearningClientInternal() {
                     <SelectTrigger><SelectValue placeholder="Select Difficulty" /></SelectTrigger>
                     <SelectContent>
                         {difficultyOptions.map(opt => (
-                            <SelectItem key={opt.value} value={opt.value}>
+                            <SelectItem key={opt.value} value={opt.value} disabled={wordCounts ? (wordCounts[opt.value as keyof WordCounts] || 0) === 0 : true}>
                                 {opt.label} {wordCounts && `(${wordCounts[opt.value as keyof WordCounts] || 0})`}
                             </SelectItem>
                         ))}
@@ -454,6 +494,18 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
         );
     }
 
+    const renderCorrectAnswer = () => {
+        if(feedback.quizType === 'synonym-antonym') {
+            return <p className="text-3xl font-bold text-primary">{typeof feedback.correctAnswer === 'string' ? feedback.correctAnswer : ''}</p>
+        }
+        return (
+            <>
+                <p className="text-3xl font-bold text-primary">{word.word}</p>
+                <p className="text-xl text-muted-foreground">"{word.meaning}"</p>
+            </>
+        )
+    }
+
     return (
         <div className="text-center space-y-6 p-4 max-w-2xl mx-auto">
             <div className="flex flex-col items-center gap-2">
@@ -469,8 +521,7 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
                     <CardTitle className="text-center">Correct Answer</CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 text-center">
-                    <p className="text-3xl font-bold text-primary">{word.word}</p>
-                    <p className="text-xl text-muted-foreground">"{word.meaning}"</p>
+                   {renderCorrectAnswer()}
                 </CardContent>
             </Card>
 
@@ -551,3 +602,5 @@ function FinishedState({ onRestart }: { onRestart: () => void }) {
         </div>
     )
 }
+
+    

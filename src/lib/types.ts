@@ -44,6 +44,8 @@ export type Word = {
   wrong_count?: {
     spelling: number;
     meaning: number;
+    synonym: number;
+    antonym: number;
   };
   correct_count?: number;
   total_exams?: number;
@@ -75,3 +77,5 @@ export const partOfSpeechOptions: Word['partOfSpeech'][] = [
   'interjection',
   'other',
 ];
+
+    

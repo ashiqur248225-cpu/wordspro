@@ -21,7 +21,7 @@ interface PerformanceStats {
     overallAccuracy: number;
     errorDistribution: { name: string; value: number, fill: string }[];
     mostMistakenWords: Word[];
-    performanceOverTime: { date: string; accuracy: number }[];
+    performanceOverTime: { date: string; accuracy: number, originalDate: Date }[];
 }
 
 type TimeFrame = 'daily' | 'weekly' | 'monthly';
@@ -35,6 +35,10 @@ const errorChartConfig = {
 		label: 'Meaning Errors',
 		color: 'hsl(var(--chart-3))',
 	},
+    'Synonym/Antonym Errors': {
+        label: 'Synonym/Antonym',
+        color: 'hsl(var(--chart-4))',
+    }
 };
 
 const accuracyChartConfig = {
@@ -58,6 +62,7 @@ export function PerformanceClient() {
                 let totalWrong = 0;
                 let spellingErrors = 0;
                 let meaningErrors = 0;
+                let synonymAntonymErrors = 0;
                 
                 const performanceData: { [key: string]: { correct: number; total: number } } = {};
 
@@ -66,11 +71,13 @@ export function PerformanceClient() {
                     totalExams += exams;
                     totalCorrect += word.correct_count || 0;
                     
-                    const wrongs = (word.wrong_count?.spelling || 0) + (word.wrong_count?.meaning || 0);
+                    const wrongs = (word.wrong_count?.spelling || 0) + (word.wrong_count?.meaning || 0) + (word.wrong_count?.synonym || 0) + (word.wrong_count?.antonym || 0);
                     totalWrong += wrongs;
 
                     spellingErrors += word.wrong_count?.spelling || 0;
                     meaningErrors += word.wrong_count?.meaning || 0;
+                    synonymAntonymErrors += (word.wrong_count?.synonym || 0) + (word.wrong_count?.antonym || 0);
+
 
                      if (exams > 0 && word.updatedAt) {
                         try {
@@ -100,7 +107,8 @@ export function PerformanceClient() {
                 const errorDistribution = [
                     { name: 'Spelling Errors', value: spellingErrors, fill: errorChartConfig['Spelling Errors'].color },
                     { name: 'Meaning Errors', value: meaningErrors, fill: errorChartConfig['Meaning Errors'].color },
-                ];
+                    { name: 'Synonym/Antonym Errors', value: synonymAntonymErrors, fill: errorChartConfig['Synonym/Antonym Errors'].color },
+                ].filter(item => item.value > 0);
 
                 const mostMistakenWords = words
                     .filter(w => (w.wrong_count?.spelling || 0) + (w.wrong_count?.meaning || 0) > 0)
@@ -119,7 +127,7 @@ export function PerformanceClient() {
                            formattedDate = format(date, 'MMM d');
                         } else if (timeFrame === 'weekly') {
                            const weekEnd = endOfWeek(date);
-                           formattedDate = `${format(date, 'MMM d')} - ${format(weekEnd, 'MMM d')}`;
+                           formattedDate = `${format(date, 'MMM d')} - ${format(weekEnd, 'd')}`;
                         } else if (timeFrame === 'monthly') {
                             formattedDate = format(date, 'MMM yyyy');
                         }
@@ -228,30 +236,36 @@ export function PerformanceClient() {
                         <CardDescription>Breakdown of your mistakes.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ChartContainer config={errorChartConfig} className="h-[250px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={stats.errorDistribution}
-                                        cx="50%"
-                                        cy="50%"
-                                        labelLine={false}
-                                        outerRadius={80}
-                                        dataKey="value"
-                                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                                    >
-                                        {stats.errorDistribution.map((entry) => (
-                                            <Cell key={entry.name} fill={entry.fill} />
-                                        ))}
-                                    </Pie>
-                                    <ChartTooltip
-                                        cursor={{fill: 'hsl(var(--muted))'}}
-                                        content={<ChartTooltipContent hideLabel />}
-                                    />
-                                    <Legend />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </ChartContainer>
+                        {stats.errorDistribution.length > 0 ? (
+                            <ChartContainer config={errorChartConfig} className="h-[250px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={stats.errorDistribution}
+                                            cx="50%"
+                                            cy="50%"
+                                            labelLine={false}
+                                            outerRadius={80}
+                                            dataKey="value"
+                                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                        >
+                                            {stats.errorDistribution.map((entry) => (
+                                                <Cell key={entry.name} fill={entry.fill} />
+                                            ))}
+                                        </Pie>
+                                        <ChartTooltip
+                                            cursor={{fill: 'hsl(var(--muted))'}}
+                                            content={<ChartTooltipContent hideLabel />}
+                                        />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </ChartContainer>
+                        ) : (
+                            <div className="flex h-[250px] items-center justify-center text-muted-foreground">
+                                No mistakes recorded yet. Keep it up!
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
                 
@@ -337,3 +351,5 @@ export function PerformanceClient() {
         </div>
     );
 }
+
+    

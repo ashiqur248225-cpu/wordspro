@@ -97,7 +97,7 @@ export async function bulkAddWords(words: any[]) {
                 updatedAt: now,
                 difficulty: 'New',
                 correct_count: 0,
-                wrong_count: { spelling: 0, meaning: 0 },
+                wrong_count: { spelling: 0, meaning: 0, synonym: 0, antonym: 0 },
                 total_exams: 0,
                 correct_streak: 0,
             };
@@ -263,3 +263,5 @@ export async function deleteNote(id: number) {
     const db = await dbInstance;
     return db.delete('notes', id);
 }
+
+    
