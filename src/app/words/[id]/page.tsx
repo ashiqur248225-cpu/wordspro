@@ -78,7 +78,9 @@ function WordDetailsPageInternal() {
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
     
     const selectedVoice = voices.find(voice => 
-        accent === 'UK' ? voice.lang.startsWith('en-GB') : voice.lang.startsWith('en-US')
+        accent === 'UK' 
+            ? voice.lang.includes('en-GB') 
+            : voice.lang.includes('en-US')
     );
 
     utterance.voice = selectedVoice || voices.find(voice => voice.lang.startsWith('en')) || null;
@@ -190,7 +192,7 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
                 const today = new Date().toDateString();
                 allWords = allWords.filter(word => {
                     if (difficultyFilter === "Today's") return new Date(word.createdAt).toDateString() === today;
-                    if (difficultyFilter === "Learned") return word.difficulty === 'Easy';
+                    if (difficultyFilter === "Learned") return word.difficulty === 'Learned';
                     return word.difficulty === difficultyFilter;
                 });
             }
@@ -279,7 +281,7 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
                                     <div className="grid grid-cols-3 items-center gap-4">
                                         <Label htmlFor="accent">Accent</Label>
                                         <RadioGroup
-                                            defaultValue={accent}
+                                            value={accent}
                                             onValueChange={(value: 'US' | 'UK') => setAccent(value)}
                                             className="col-span-2 flex items-center"
                                         >
