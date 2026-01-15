@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { notFound, useParams, useRouter, useSearchParams } from 'next/navigation';
 import { getWord, getAllWords } from '@/lib/db';
-import type { Word, VerbFormDetail, Synonym, Antonym } from '@/lib/types';
+import type { Word, VerbFormDetail, Synonym, Antonym, WordFamilyDetail, ExampleSentence } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,17 +12,16 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-function DetailCard({ title, children }: { title: string; children: React.ReactNode }) {
+function DetailCard({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   if (!children) return null;
   return (
-    <Card className="bg-muted/30">
+    <Card className="bg-card/70">
       <CardHeader>
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
-      <CardContent>
-        {children}
-      </CardContent>
+      <CardContent>{children}</CardContent>
     </Card>
   );
 }
@@ -101,12 +100,12 @@ function WordDetailsPageInternal() {
     window.speechSynthesis.speak(utterance);
   };
 
-  const VerbFormRow = ({ label, data }: { label: string, data?: VerbFormDetail }) => {
+const VerbFormRow = ({ label, data }: { label: string, data?: VerbFormDetail }) => {
     if (!data || !data.word) return null;
     return (
-        <div className="grid grid-cols-4 gap-4 py-4 border-b">
-            <div className="font-medium text-muted-foreground">{label}</div>
-            <div className="col-span-1">
+        <TableRow>
+            <TableCell className="font-medium">{label}</TableCell>
+            <TableCell>
                 <p 
                     className="font-semibold cursor-pointer flex items-center gap-2"
                     onClick={() => handlePlayAudio(data.word!)}
@@ -115,33 +114,43 @@ function WordDetailsPageInternal() {
                     <Volume2 className={`inline h-4 w-4 text-muted-foreground ${isPlaying === data.word ? 'animate-pulse text-primary' : ''}`} />
                 </p>
                 <p className="text-sm text-muted-foreground">{data.pronunciation}</p>
-            </div>
-            <div className="col-span-1">
-                <p>{data.bangla_meaning}</p>
-            </div>
-            <div className="col-span-1">
-                 {data.usage_timing && <p className="text-sm text-muted-foreground">{data.usage_timing}</p>}
-            </div>
-        </div>
+            </TableCell>
+            <TableCell>{data.bangla_meaning}</TableCell>
+            <TableCell className="text-sm text-muted-foreground">{data.usage_timing}</TableCell>
+        </TableRow>
     );
 };
 
 const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
-    const word = typeof item === 'string' ? item : item.word;
+    const wordText = typeof item === 'string' ? item : item.word;
     const bangla = typeof item !== 'string' ? item.bangla : undefined;
 
     return (
         <Badge 
             variant="secondary" 
             className="text-base px-3 py-1 cursor-pointer flex items-center gap-2"
-            onClick={() => handlePlayAudio(word)}
+            onClick={() => handlePlayAudio(wordText)}
         >
-            <span>{word}</span>
+            <span>{wordText}</span>
             {bangla && <span className="text-sm text-muted-foreground">({bangla})</span>}
-            <Volume2 className={`inline h-4 w-4 text-muted-foreground ${isPlaying === word ? 'animate-pulse text-primary' : ''}`} />
+            <Volume2 className={`inline h-4 w-4 text-muted-foreground ${isPlaying === wordText ? 'animate-pulse text-primary' : ''}`} />
         </Badge>
     );
 };
+
+const WordFamilyRow = ({ label, data }: { label: string, data?: WordFamilyDetail }) => {
+    if (!data) return null;
+    return (
+        <TableRow>
+            <TableCell className="font-medium capitalize">{label}</TableCell>
+            <TableCell>
+                 <p className="font-semibold">{data.word}</p>
+                 <p className="text-sm text-muted-foreground">{data.pronunciation}</p>
+            </TableCell>
+            <TableCell>{data.meaning}</TableCell>
+        </TableRow>
+    )
+}
 
 
   const fetchWordData = useCallback(async () => {
@@ -252,14 +261,17 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
   }
 
   const hasVerbForms = word.verb_forms && (word.verb_forms.v1_present?.word || word.verb_forms.v2_past?.word || word.verb_forms.v3_past_participle?.word);
+  const hasWordFamily = word.word_family && Object.keys(word.word_family).length > 0;
+  const hasExampleSentences = word.exampleSentences && (word.exampleSentences.by_structure?.length || word.exampleSentences.by_tense?.length);
+
 
   return (
     <div className="p-4 md:p-6">
         <div className="max-w-4xl mx-auto">
-            <div className="flex justify-between items-start mb-6">
+            <header className="flex justify-between items-start mb-6">
                 <div>
                     <h1 className="text-5xl font-bold">{word.word}</h1>
-                    <p className="text-xl text-muted-foreground">{word.partOfSpeech}</p>
+                    <p className="text-xl text-muted-foreground capitalize">{word.partOfSpeech}</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="icon" onClick={() => handlePlayAudio(word.word)} disabled={!!isPlaying}>
@@ -325,25 +337,46 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
                     </Popover>
                     <Badge variant={word.difficulty === 'Hard' ? 'destructive' : word.difficulty === 'New' ? 'outline' : 'secondary'} className="text-base px-4 py-1">{word.difficulty}</Badge>
                 </div>
-            </div>
+            </header>
 
-            <div className="space-y-6">
+            <main className="space-y-6">
                 <DetailCard title="Meaning (Bangla)">
                     <p className="text-2xl">{word.meaning}</p>
                 </DetailCard>
 
                 {word.meaning_explanation && (
                   <DetailCard title="Meaning Explanation">
-                      <p className="text-lg text-muted-foreground">"{word.meaning_explanation}"</p>
+                      <p className="text-lg text-muted-foreground">{word.meaning_explanation}</p>
                   </DetailCard>
                 )}
 
-                {word.usageDistinction && (
+                {word.usage_distinction && (
                   <DetailCard title="Usage Distinction">
-                      <p className="text-lg text-muted-foreground">"{word.usageDistinction}"</p>
+                      <p className="text-lg text-muted-foreground">{word.usage_distinction}</p>
                   </DetailCard>
                 )}
                 
+                {hasWordFamily && (
+                    <DetailCard title="Word Family">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Form</TableHead>
+                                    <TableHead>Word & Pronunciation</TableHead>
+                                    <TableHead>Meaning</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <WordFamilyRow label="noun" data={word.word_family?.noun} />
+                                <WordFamilyRow label="adjective" data={word.word_family?.adjective} />
+                                <WordFamilyRow label="adverb" data={word.word_family?.adverb} />
+                                <WordFamilyRow label="verb" data={word.word_family?.verb} />
+                                <WordFamilyRow label="person noun" data={word.word_family?.person_noun} />
+                            </TableBody>
+                        </Table>
+                    </DetailCard>
+                )}
+
                 {word.synonyms && word.synonyms.length > 0 && (
                     <DetailCard title="Synonyms">
                         <div className="flex flex-wrap gap-2">
@@ -362,45 +395,66 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
 
                 {word.syllables && word.syllables.length > 0 && (
                   <DetailCard title="Syllables">
-                      <p className="font-mono text-lg">{word.syllables?.join(' / ')}</p>
+                      <p className="font-mono text-lg tracking-widest">{word.syllables?.join(' / ')}</p>
                   </DetailCard>
                 )}
                 
-                {word.exampleSentences && word.exampleSentences.length > 0 && (
-                  <DetailCard title="Example Sentences">
-                      <ul className="list-disc list-inside space-y-2">
-                          {word.exampleSentences?.map((sentence, i) => <li key={i} key={i} className="text-lg">"{sentence}"</li>)}
-                      </ul>
-                  </DetailCard>
+                {hasExampleSentences && (
+                    <div className="space-y-6">
+                        {word.exampleSentences?.by_structure && word.exampleSentences.by_structure.length > 0 && (
+                            <DetailCard title="Examples by Structure">
+                                <div className="space-y-4">
+                                {word.exampleSentences.by_structure.map((ex, i) => (
+                                    <div key={i}>
+                                        <p className="font-semibold text-lg">"{ex.sentence}"</p>
+                                        <p className="text-sm text-muted-foreground"><Badge variant="outline" className="mr-2">{ex.type}</Badge>{ex.explanation}</p>
+                                    </div>
+                                ))}
+                                </div>
+                            </DetailCard>
+                        )}
+                         {word.exampleSentences?.by_tense && word.exampleSentences.by_tense.length > 0 && (
+                            <DetailCard title="Examples by Tense">
+                                <ul className="list-disc list-inside space-y-2">
+                                {word.exampleSentences.by_tense.map((ex, i) => (
+                                     <li key={i}><Badge variant="secondary" className="mr-2">{ex.tense}</Badge> "{ex.sentence}"</li>
+                                ))}
+                                </ul>
+                            </DetailCard>
+                        )}
+                    </div>
                 )}
 
                 {hasVerbForms && (
                     <DetailCard title="Verb Forms">
-                        <VerbFormRow label="Present (V1)" data={word.verb_forms?.v1_present} />
-                        <VerbFormRow label="Past (V2)" data={word.verb_forms?.v2_past} />
-                        <VerbFormRow label="Past Participle (V3)" data={word.verb_forms?.v3_past_participle} />
+                         <Table>
+                            <TableHeader>
+                                <TableRow>
+                                <TableHead>Form</TableHead>
+                                <TableHead>Word & Pronunciation</TableHead>
+                                <TableHead>Bangla Meaning</TableHead>
+                                <TableHead>Usage</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <VerbFormRow label="Present (V1)" data={word.verb_forms?.v1_present} />
+                                <VerbFormRow label="Past (V2)" data={word.verb_forms?.v2_past} />
+                                <VerbFormRow label="Past Participle (V3)" data={word.verb_forms?.v3_past_participle} />
+                            </TableBody>
+                        </Table>
                     </DetailCard>
                 )}
-                
-                {word.verb_forms?.form_examples && (
-                     <DetailCard title="Form Examples">
-                        <div className="space-y-2 text-lg">
-                           {word.verb_forms.form_examples.v1 && <p><span className="font-bold">V1:</span> "{word.verb_forms.form_examples.v1}"</p>}
-                           {word.verb_forms.form_examples.v2 && <p><span className="font-bold">V2:</span> "{word.verb_forms.form_examples.v2}"</p>}
-                           {word.verb_forms.form_examples.v3 && <p><span className="font-bold">V3:</span> "{word.verb_forms.form_examples.v3}"</p>}
-                        </div>
-                    </DetailCard>
-                )}
-            </div>
 
-            <div className="flex justify-between mt-8">
+            </main>
+
+            <footer className="flex justify-between mt-8">
                 <Button variant="outline" onClick={() => navigateToWord(currentIndex - 1)} disabled={currentIndex <= 0}>
                     <ArrowLeft className="mr-2" /> Previous Word
                 </Button>
                 <Button variant="outline" onClick={() => navigateToWord(currentIndex + 1)} disabled={currentIndex >= filteredWordIds.length - 1}>
                     Next Word <ArrowRight className="ml-2" />
                 </Button>
-            </div>
+            </footer>
         </div>
     </div>
   );

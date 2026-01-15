@@ -9,11 +9,6 @@ export type VerbForms = {
   v1_present?: VerbFormDetail;
   v2_past?: VerbFormDetail;
   v3_past_participle?: VerbFormDetail;
-  form_examples?: {
-    v1?: string;
-    v2?: string;
-    v3?: string;
-  };
 };
 
 export type Synonym = {
@@ -26,18 +21,45 @@ export type Antonym = {
   bangla?: string;
 }
 
+export type WordFamilyDetail = {
+    word: string;
+    pronunciation: string;
+    meaning: string;
+}
+
+export type ExampleSentence = {
+    type?: 'Simple' | 'Complex' | 'Compound';
+    tense?: 'Present Simple' | 'Present Continuous' | 'Past Simple' | 'Future Simple' | string;
+    sentence: string;
+    explanation?: string;
+}
+
 export type Word = {
-  id: string; // Changed to UUID
+  id: string;
   word: string;
   meaning: string;
   meaning_explanation?: string;
   partOfSpeech: 'noun' | 'verb' | 'adjective' | 'adverb' | 'pronoun' | 'preposition' | 'conjunction' | 'interjection' | 'other';
   syllables?: string[];
-  usageDistinction?: string;
+  
+  // New detailed fields from JSON
+  word_family?: {
+      noun?: WordFamilyDetail;
+      adjective?: WordFamilyDetail;
+      adverb?: WordFamilyDetail;
+      verb?: WordFamilyDetail;
+      person_noun?: WordFamilyDetail;
+  };
+  usage_distinction?: string;
+  verb_forms?: VerbForms | null;
+  exampleSentences?: {
+      by_structure?: ExampleSentence[];
+      by_tense?: ExampleSentence[];
+  } | null;
+
   synonyms?: (string | Synonym)[];
   antonyms?: (string | Antonym)[];
-  exampleSentences?: string[];
-  verb_forms?: VerbForms | null;
+  
   difficulty: 'New' | 'Easy' | 'Medium' | 'Hard' | 'Learned';
   
   // System-managed stats
@@ -77,5 +99,3 @@ export const partOfSpeechOptions: Word['partOfSpeech'][] = [
   'interjection',
   'other',
 ];
-
-    

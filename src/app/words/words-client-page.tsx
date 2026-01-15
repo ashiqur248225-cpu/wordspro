@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { PlusCircle, Upload, Filter, BookOpenCheck, MoreHorizontal, Search, BookCopy } from 'lucide-react';
+import { PlusCircle, Upload, Filter, Search, MoreHorizontal, BookCopy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -75,11 +75,6 @@ const verbFormsSchema = z.object({
     v1_present: verbFormDetailSchema,
     v2_past: verbFormDetailSchema,
     v3_past_participle: verbFormDetailSchema,
-    form_examples: z.object({
-        v1: z.string().optional(),
-        v2: z.string().optional(),
-        v3: z.string().optional(),
-    }).optional(),
 }).optional();
 
 
@@ -89,7 +84,7 @@ const wordSchema = z.object({
   partOfSpeech: z.enum(partOfSpeechOptions),
   meaning_explanation: z.string().optional(),
   syllables: z.string().optional(), //
-  usageDistinction: z.string().optional(),
+  usage_distinction: z.string().optional(),
   synonyms: z.string().optional(),
   antonyms: z.string().optional(),
   exampleSentences: z.string().optional(),
@@ -99,6 +94,12 @@ const wordSchema = z.object({
 type WordFormData = z.infer<typeof wordSchema>;
 
 // Bulk import schema
+const bulkImportWordFamilyDetailSchema = z.object({
+    word: z.string(),
+    pronunciation: z.string(),
+    meaning: z.string(),
+}).optional();
+
 const bulkImportVerbFormDetailSchema = z.object({
   word: z.string().optional(),
   pronunciation: z.string().optional(),
@@ -110,28 +111,36 @@ const bulkImportVerbFormsSchema = z.object({
     v1_present: bulkImportVerbFormDetailSchema,
     v2_past: bulkImportVerbFormDetailSchema,
     v3_past_participle: bulkImportVerbFormDetailSchema,
-    form_examples: z.object({
-        v1: z.string().optional(),
-        v2: z.string().optional(),
-        v3: z.string().optional(),
-    }).optional(),
 }).nullable();
+
+const bulkImportExampleSentenceSchema = z.object({
+    type: z.string().optional(),
+    tense: z.string().optional(),
+    sentence: z.string(),
+    explanation: z.string().optional(),
+});
 
 
 const bulkImportWordSchema = z.object({
     word: z.string(),
     meaning: z.string(),
-    meaning_explanation: z.string().optional(),
-    parts_of_speech: z.preprocess(
-        (val) => (typeof val === 'string' ? val.toLowerCase() : val),
-        z.enum(partOfSpeechOptions)
-    ),
-    syllables: z.array(z.string()).optional(),
+    parts_of_speech: z.enum(partOfSpeechOptions),
+    word_family: z.object({
+      noun: bulkImportWordFamilyDetailSchema,
+      adjective: bulkImportWordFamilyDetailSchema,
+      adverb: bulkImportWordFamilyDetailSchema,
+      verb: bulkImportWordFamilyDetailSchema,
+      person_noun: bulkImportWordFamilyDetailSchema,
+    }).optional(),
     usage_distinction: z.string().optional(),
-    example_sentences: z.array(z.string()).optional(),
     verb_forms: bulkImportVerbFormsSchema,
+    example_sentences: z.object({
+      by_structure: z.array(bulkImportExampleSentenceSchema).optional(),
+      by_tense: z.array(bulkImportExampleSentenceSchema).optional(),
+    }).optional(),
     synonyms: z.union([z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])), z.null()]).optional(),
     antonyms: z.union([z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])), z.null()]).optional(),
+    syllables: z.array(z.string()).optional(),
 });
 const bulkImportSchema = z.array(bulkImportWordSchema);
 
@@ -249,7 +258,7 @@ function WordsClientContent() {
       partOfSpeech: 'noun',
       meaning_explanation: '',
       syllables: '',
-      usageDistinction: '',
+      usage_distinction: '',
       synonyms: '',
       antonyms: '',
       exampleSentences: '',
@@ -258,15 +267,29 @@ function WordsClientContent() {
   });
 
   const arrayToString = (arr: any[] | undefined) => Array.isArray(arr) ? arr.map(item => typeof item === 'object' && item !== null ? item.word : item).join(', ') : '';
-  const examplesToString = (arr: any[] | undefined) => Array.isArray(arr) ? arr.join('\n') : '';
+  
+  const examplesToString = (examples: any | undefined): string => {
+    if (!examples) return '';
+    const allSentences = [
+        ...(examples.by_structure || []),
+        ...(examples.by_tense || [])
+    ];
+    return allSentences.map(ex => ex.sentence).join('\n');
+  };
 
   const stringToArray = (str: string | undefined) => str ? str.split(',').map(s => s.trim()).filter(Boolean) : [];
-  const examplesToArray = (str: string | undefined) => str ? str.split('\n').map(s => s.trim()).filter(Boolean) : [];
+  const examplesToArray = (str: string | undefined) => {
+    if (!str) return null;
+    const sentences = str.split('\n').map(s => s.trim()).filter(Boolean);
+    // This is a simplification. The detailed structure is lost when editing via simple textarea.
+    // For a full implementation, the form would need to be much more complex.
+    return { by_tense: sentences.map(s => ({ sentence: s })) };
+  };
 
 
   const onSubmit = async (data: WordFormData) => {
     try {
-        const payload: Omit<Word, 'id' | 'createdAt' | 'updatedAt' | 'difficulty' | 'learned' | 'wrong_count' | 'correct_count' | 'total_exams'> = {
+        const payload: Omit<Word, 'id' | 'createdAt' | 'updatedAt' | 'difficulty' | 'correct_count' | 'wrong_count' | 'total_exams' | 'correct_streak'> = {
           ...data,
           partOfSpeech: data.partOfSpeech,
           syllables: stringToArray(data.syllables),
@@ -323,7 +346,7 @@ function WordsClientContent() {
         partOfSpeech: 'noun',
         meaning_explanation: '',
         syllables: '',
-        usageDistinction: '',
+        usage_distinction: '',
         synonyms: '',
         antonyms: '',
         exampleSentences: '',
@@ -434,6 +457,7 @@ function WordsClientContent() {
       { id: 'spelling', label: 'Spelling Test', disabled: false },
       { id: 'fill-blanks', label: 'Fill-in-the-Blanks', disabled: false },
       { id: 'verb-form', label: 'Verb Form Test', disabled: false },
+      { id: 'synonym-antonym', label: 'Synonym/Antonym', disabled: false },
   ]
 
   return (
@@ -545,7 +569,7 @@ function WordsClientContent() {
                 <DialogHeader>
                     <DialogTitle>Bulk Import Words</DialogTitle>
                     <DialogDescription>
-                        Paste a JSON array of words to import them in bulk.
+                        Paste a JSON array of words to import them in bulk, following the new detailed format.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">

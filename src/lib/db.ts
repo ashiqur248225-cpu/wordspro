@@ -88,7 +88,8 @@ export async function bulkAddWords(words: any[]) {
                 meaning_explanation: word.meaning_explanation,
                 partOfSpeech: word.parts_of_speech,
                 syllables: word.syllables,
-                usageDistinction: word.usage_distinction,
+                word_family: word.word_family,
+                usage_distinction: word.usage_distinction,
                 exampleSentences: word.example_sentences,
                 synonyms: word.synonyms,
                 antonyms: word.antonyms,
@@ -111,6 +112,7 @@ export async function bulkAddWords(words: any[]) {
     await tx.done;
     return { successCount, errorCount, errors };
 }
+
 
 export async function getAllWords(): Promise<Word[]> {
     const dbInstance = getDbInstance();
@@ -155,7 +157,7 @@ export async function deleteWord(id: string) {
     return db.delete('words', id);
 }
 
-export async function getWordsByDifficulty(difficulty: ('Easy' | 'Medium' | 'Hard' | 'New' | 'Learned')[]): Promise<Word[]> {
+export async function getWordsByDifficulty(difficulty: Word['difficulty'][]): Promise<Word[]> {
     const dbInstance = getDbInstance();
     if (!dbInstance) return [];
 
