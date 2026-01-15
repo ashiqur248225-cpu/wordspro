@@ -141,7 +141,12 @@ const bulkImportWordSchema = z.object({
     synonyms: z.union([z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])), z.null()]).optional(),
     antonyms: z.union([z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])), z.null()]).optional(),
     syllables: z.array(z.string()).optional(),
-});
+}).transform(data => ({
+    ...data,
+    partOfSpeech: data.parts_of_speech,
+    exampleSentences: data.example_sentences,
+}));
+
 const bulkImportSchema = z.array(bulkImportWordSchema);
 
 
