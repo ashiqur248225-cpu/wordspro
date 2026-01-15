@@ -98,14 +98,14 @@ const bulkImportWordFamilyDetailSchema = z.object({
     word: z.string(),
     pronunciation: z.string(),
     meaning: z.string(),
-}).optional();
+});
 
 const bulkImportVerbFormDetailSchema = z.object({
   word: z.string().optional(),
   pronunciation: z.string().optional(),
   bangla_meaning: z.string().optional(),
   usage_timing: z.string().optional(),
-}).optional();
+});
 
 const bulkImportVerbFormsSchema = z.object({
     v1_present: bulkImportVerbFormDetailSchema.optional(),
@@ -126,12 +126,12 @@ const bulkImportWordSchema = z.object({
     meaning: z.string(),
     parts_of_speech: z.enum(partOfSpeechOptions),
     word_family: z.object({
-      noun: bulkImportWordFamilyDetailSchema,
-      adjective: bulkImportWordFamilyDetailSchema,
-      adverb: bulkImportWordFamilyDetailSchema,
-      verb: bulkImportWordFamilyDetailSchema,
-      person_noun: bulkImportWordFamilyDetailSchema,
-      plural_noun: bulkImportWordFamilyDetailSchema,
+      noun: bulkImportWordFamilyDetailSchema.optional(),
+      adjective: bulkImportWordFamilyDetailSchema.optional(),
+      adverb: bulkImportWordFamilyDetailSchema.optional(),
+      verb: bulkImportWordFamilyDetailSchema.optional(),
+      person_noun: bulkImportWordFamilyDetailSchema.optional(),
+      plural_noun: bulkImportWordFamilyDetailSchema.optional(),
     }).optional(),
     usage_distinction: z.string().optional(),
     verb_forms: bulkImportVerbFormsSchema.optional(),
@@ -139,8 +139,8 @@ const bulkImportWordSchema = z.object({
       by_structure: z.array(bulkImportExampleSentenceSchema).optional(),
       by_tense: z.array(bulkImportExampleSentenceSchema).optional(),
     }).optional(),
-    synonyms: z.union([z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])), z.null()]).optional(),
-    antonyms: z.union([z.array(z.union([z.string(), z.object({word: z.string(), bangla: z.string()})])), z.null()]).optional(),
+    synonyms: z.array(z.object({ word: z.string(), bangla: z.string() })).optional(),
+    antonyms: z.array(z.object({ word: z.string(), bangla: z.string() })).optional(),
     syllables: z.array(z.string()).optional(),
 }).transform(data => ({
     ...data,
