@@ -69,7 +69,7 @@ const verbFormDetailSchema = z.object({
   pronunciation: z.string().optional().nullable(),
   bangla_meaning: z.string().optional().nullable(),
   usage_timing: z.string().optional().nullable(),
-}).optional();
+}).optional().nullable();
 
 const verbFormsSchema = z.object({
     v1_present: verbFormDetailSchema,
@@ -94,6 +94,46 @@ const wordSchema = z.object({
 type WordFormData = z.infer<typeof wordSchema>;
 
 // Bulk import schema
+const bulkImportVerbFormDetailSchema = z.object({
+  word: z.string(),
+  pronunciation: z.string().optional(),
+  bangla_meaning: z.string().optional(),
+  usage_timing: z.string().optional(),
+});
+
+const bulkImportVerbFormsSchema = z.object({
+    v1_present: bulkImportVerbFormDetailSchema.optional(),
+    v2_past: bulkImportVerbFormDetailSchema.optional(),
+    v3_past_participle: bulkImportVerbFormDetailSchema.optional(),
+}).optional();
+
+const bulkImportExampleSentenceSchema = z.object({
+    type: z.string().optional(),
+    sentence: z.string(),
+    explanation: z.string().optional(),
+});
+
+const bulkImportExampleSentenceByTenseSchema = z.object({
+    tense: z.string().optional(),
+    sentence: z.string(),
+});
+
+const bulkImportWordFamilyDetailSchema = z.object({
+    word: z.string(),
+    pronunciation: z.string(),
+    meaning: z.string(),
+});
+
+const bulkImportWordFamilySchema = z.object({
+    noun: bulkImportWordFamilyDetailSchema.optional(),
+    adjective: bulkImportWordFamilyDetailSchema.optional(),
+    adverb: bulkImportWordFamilyDetailSchema.optional(),
+    verb: bulkImportWordFamilyDetailSchema.optional(),
+    person_noun: bulkImportWordFamilyDetailSchema.optional(),
+    plural_noun: bulkImportWordFamilyDetailSchema.optional(),
+}).optional();
+
+
 const bulkImportWordSchema = z.array(z.object({
     word: z.string(),
     meaning: z.string(),
@@ -102,18 +142,21 @@ const bulkImportWordSchema = z.array(z.object({
       z.enum(partOfSpeechOptions)
     ),
     syllables: z.array(z.string()).optional(),
-    word_family: z.any().optional(),
+    word_family: bulkImportWordFamilySchema,
     usage_distinction: z.string().optional(),
-    verb_forms: z.any().optional(),
-    example_sentences: z.any().optional(),
-    synonyms: z.array(z.any()).optional(),
-    antonyms: z.array(z.any()).optional(),
-}).transform(data => ({
-    ...data,
-    partOfSpeech: data.parts_of_speech,
-    exampleSentences: data.example_sentences,
-    verb_forms: data.verb_forms ?? null,
-})));
+    verb_forms: bulkImportVerbFormsSchema,
+    example_sentences: z.object({
+        by_structure: z.array(bulkImportExampleSentenceSchema).optional(),
+        by_tense: z.array(bulkImportExampleSentenceByTenseSchema).optional(),
+    }).optional(),
+    synonyms: z.array(z.object({ word: z.string(), bangla: z.string() })).optional(),
+    antonyms: z.array(z.object({ word: z.string(), bangla: z.string() })).optional(),
+}).transform(data => data.map(item => ({
+    ...item,
+    partOfSpeech: item.parts_of_speech,
+    exampleSentences: item.example_sentences,
+    verb_forms: item.verb_forms ?? null,
+}))));
 
 
 function WordsClientContent() {
@@ -358,7 +401,7 @@ function WordsClientContent() {
         const jsonData = JSON.parse(importJson);
         const parsedData = bulkImportWordSchema.parse(jsonData);
         
-        const result = await bulkAddWords(parsedData);
+        const result = await bulkAddWords(parsedData as any);
         
         toast({
             title: 'Bulk Import Complete',
@@ -696,5 +739,3 @@ export function WordsClientPage() {
         </Suspense>
     )
 }
-
-    
