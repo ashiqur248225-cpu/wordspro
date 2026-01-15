@@ -323,6 +323,14 @@ function WordsClientContent() {
   }
 
 const handleBulkImport = async () => {
+    if (!importJson.trim()) {
+        toast({
+            variant: 'destructive',
+            title: 'Input Required',
+            description: 'Please paste the JSON content to import.',
+        });
+        return;
+    }
   try {
     const jsonData = JSON.parse(importJson);
     

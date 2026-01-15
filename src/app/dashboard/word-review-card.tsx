@@ -95,7 +95,7 @@ export function WordReviewCard({ difficulty }: WordReviewCardProps) {
 
   return (
     <Card asChild className={`${config.color} transition-all flex flex-col`}>
-      <Link href={`/words?difficulty=${difficulty}`}>
+      <Link href={`/flashcards?difficulty=${difficulty}`}>
         <CardHeader className="flex-grow">
           <CardTitle className="flex items-center justify-between">
             <span>{difficulty} Words</span>
@@ -105,7 +105,7 @@ export function WordReviewCard({ difficulty }: WordReviewCardProps) {
         </CardHeader>
         <CardFooter>
           <div className="flex items-center text-sm font-medium text-primary">
-            View List <ArrowRight className="ml-2 h-4 w-4" />
+            Start Flashcards <ArrowRight className="ml-2 h-4 w-4" />
           </div>
         </CardFooter>
       </Link>
