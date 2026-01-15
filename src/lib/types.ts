@@ -50,7 +50,7 @@ export type Word = {
       verb?: WordFamilyDetail;
       person_noun?: WordFamilyDetail;
       plural_noun?: WordFamilyDetail;
-  };
+  } | null;
   usage_distinction?: string;
   verb_forms?: VerbForms | null;
   exampleSentences?: {

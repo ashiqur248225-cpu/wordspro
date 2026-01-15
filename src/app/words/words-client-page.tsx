@@ -65,7 +65,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const verbFormDetailSchema = z.object({
-  word: z.string().optional(),
+  word: z.string().min(1, 'Word is required'),
   pronunciation: z.string().optional(),
   bangla_meaning: z.string().optional(),
   usage_timing: z.string().optional(),
@@ -101,7 +101,7 @@ const bulkImportWordFamilyDetailSchema = z.object({
 }).optional();
 
 const bulkImportVerbFormDetailSchema = z.object({
-  word: z.string().optional(),
+  word: z.string(),
   pronunciation: z.string().optional(),
   bangla_meaning: z.string().optional(),
   usage_timing: z.string().optional(),
@@ -111,7 +111,7 @@ const bulkImportVerbFormsSchema = z.object({
     v1_present: bulkImportVerbFormDetailSchema.optional(),
     v2_past: bulkImportVerbFormDetailSchema.optional(),
     v3_past_participle: bulkImportVerbFormDetailSchema.optional(),
-});
+}).optional();
 
 const bulkImportExampleSentenceByStructureSchema = z.object({
     type: z.string().optional(),
@@ -136,10 +136,10 @@ const bulkImportWordSchema = z.array(z.object({
       adverb: bulkImportWordFamilyDetailSchema,
       verb: bulkImportWordFamilyDetailSchema,
       person_noun: bulkImportWordFamilyDetailSchema,
-      plural_noun: bulkImportWordFamilyDetailSchema,
+      plural_noun: bulkImportWordFamilyDetailSchema.optional(),
     }).optional(),
     usage_distinction: z.string().optional(),
-    verb_forms: bulkImportVerbFormsSchema.optional(),
+    verb_forms: bulkImportVerbFormsSchema,
     example_sentences: z.object({
       by_structure: z.array(bulkImportExampleSentenceByStructureSchema).optional(),
       by_tense: z.array(bulkImportExampleSentenceByTenseSchema).optional(),
@@ -517,7 +517,7 @@ function WordsClientContent() {
                         <FormField control={form.control} name="partOfSpeech" render={({ field }) => (
                             <FormItem className="col-span-2"><FormLabel>Part of Speech</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                <SelectContent>{partOfSpeechOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                                <SelectContent>{partOfSpeechOptions.map(o => <SelectItem key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</SelectItem>)}</SelectContent>
                             </Select><FormMessage /></FormItem>
                         )} />
                         
