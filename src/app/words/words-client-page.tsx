@@ -47,7 +47,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
-import type { Word, WordDifficulty } from '@/lib/types';
+import type { Word } from '@/lib/types';
 import { partOfSpeechOptions } from '@/lib/types';
 import { addWord, getAllWords, deleteWord, updateWord, bulkAddWords } from '@/lib/db';
 import { useToast } from '@/hooks/use-toast';
@@ -66,16 +66,16 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 const verbFormDetailSchema = z.object({
   word: z.string().min(1, 'Word is required'),
-  pronunciation: z.string().optional(),
-  bangla_meaning: z.string().optional(),
-  usage_timing: z.string().optional(),
+  pronunciation: z.string().optional().nullable(),
+  bangla_meaning: z.string().optional().nullable(),
+  usage_timing: z.string().optional().nullable(),
 }).optional();
 
 const verbFormsSchema = z.object({
     v1_present: verbFormDetailSchema,
     v2_past: verbFormDetailSchema,
     v3_past_participle: verbFormDetailSchema,
-}).optional();
+}).optional().nullable();
 
 
 const wordSchema = z.object({
@@ -88,7 +88,7 @@ const wordSchema = z.object({
   synonyms: z.string().optional(),
   antonyms: z.string().optional(),
   exampleSentences: z.string().optional(),
-  verb_forms: verbFormsSchema.nullable(),
+  verb_forms: verbFormsSchema,
 });
 
 type WordFormData = z.infer<typeof wordSchema>;
@@ -98,7 +98,7 @@ const bulkImportWordSchema = z.array(z.object({
     word: z.string(),
     meaning: z.string(),
     parts_of_speech: z.preprocess(
-      (val) => String(val).toLowerCase(),
+      (val) => String(val).toLowerCase().replace('-', '/'),
       z.enum(partOfSpeechOptions)
     ),
     syllables: z.array(z.string()).optional(),
@@ -111,7 +111,7 @@ const bulkImportWordSchema = z.array(z.object({
 }).transform(data => ({
     ...data,
     partOfSpeech: data.parts_of_speech,
-    exampleSentences: data.example_sentences ?? null,
+    exampleSentences: data.example_sentences,
     verb_forms: data.verb_forms ?? null,
 })));
 
@@ -696,3 +696,5 @@ export function WordsClientPage() {
         </Suspense>
     )
 }
+
+    
