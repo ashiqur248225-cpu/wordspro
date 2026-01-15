@@ -1,11 +1,11 @@
 {
   "name": "WordPro",
   "short_name": "WordPro",
-  "description": "An intelligent app to master vocabulary.",
+  "description": "An intelligent app to build your vocabulary.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#3B88C3",
+  "theme_color": "#3b82f6",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
