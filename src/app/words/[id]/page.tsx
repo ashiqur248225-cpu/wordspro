@@ -46,24 +46,28 @@ function WordDetailsPageInternal() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
 
   useEffect(() => {
-    const handleVoicesChanged = () => {
-      setVoices(window.speechSynthesis.getVoices());
+    const getVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      if (availableVoices.length > 0) {
+        setVoices(availableVoices);
+      }
     };
-    window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
-    handleVoicesChanged(); // Initial load
+
+    getVoices();
+    window.speechSynthesis.onvoiceschanged = getVoices;
+
     return () => {
-      window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
+      window.speechSynthesis.onvoiceschanged = null;
     };
   }, []);
 
 
-  const handlePlayAudio = async (textToSpeak: string) => {
+  const handlePlayAudio = (textToSpeak: string) => {
     if (typeof window === 'undefined' || !window.speechSynthesis) {
         console.error('Speech synthesis not supported.');
         return;
     }
     
-    // Cancel any ongoing speech
     if (window.speechSynthesis.speaking) {
         window.speechSynthesis.cancel();
         if (isPlaying === textToSpeak) {
@@ -76,13 +80,27 @@ function WordDetailsPageInternal() {
 
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
     
-    const selectedVoice = voices.find(voice => 
-        accent === 'UK' 
-            ? voice.lang.includes('en-GB') 
-            : voice.lang.includes('en-US')
-    );
+    const allVoices = window.speechSynthesis.getVoices();
+    let selectedVoice: SpeechSynthesisVoice | undefined;
 
-    utterance.voice = selectedVoice || voices.find(voice => voice.lang.startsWith('en')) || null;
+    if (accent === 'UK') {
+      selectedVoice = allVoices.find(voice => voice.lang === 'en-GB' && (voice.name.includes('Google') || voice.name.includes('Daniel')));
+      if (!selectedVoice) {
+        selectedVoice = allVoices.find(voice => voice.lang === 'en-GB');
+      }
+    } else { // US accent
+      selectedVoice = allVoices.find(voice => voice.lang === 'en-US' && (voice.name.includes('Google') || voice.name.includes('Alex')));
+      if (!selectedVoice) {
+         selectedVoice = allVoices.find(voice => voice.lang === 'en-US');
+      }
+    }
+    
+    // Fallback to any english voice if specific accent not found
+    if (!selectedVoice) {
+        selectedVoice = allVoices.find(voice => voice.lang.startsWith('en-'));
+    }
+
+    utterance.voice = selectedVoice || null;
     utterance.volume = volume[0]; // 0 to 1
     utterance.rate = speed[0]; // 0.1 to 10
     utterance.pitch = 1; // 0 to 2
