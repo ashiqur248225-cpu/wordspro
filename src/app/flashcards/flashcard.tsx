@@ -62,6 +62,7 @@ export function FlashCard({ word }: FlashCardProps) {
   
   const hasVerbForms = word.verb_forms && (word.verb_forms.v1_present?.word || word.verb_forms.v2_past?.word || word.verb_forms.v3_past_participle?.word);
   const hasWordFamily = word.word_family && Object.values(word.word_family).some(v => v);
+  const hasExampleSentences = word.exampleSentences && (word.exampleSentences.by_structure?.length || word.exampleSentences.by_tense?.length);
 
   return (
     <div className={`flashcard ${isFlipped ? 'flipped' : ''}`} onClick={() => setIsFlipped(!isFlipped)}>
@@ -129,11 +130,21 @@ export function FlashCard({ word }: FlashCardProps) {
                         <CardTitle className="text-center text-3xl">{word.word} - Usage</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        {word.exampleSentences && (word.exampleSentences.by_tense || word.exampleSentences.by_structure) && (
+                        {hasExampleSentences && (
                             <DetailSection title="Example Sentences">
                                 <ul className="list-disc list-inside space-y-2">
-                                    {word.exampleSentences.by_structure?.map((ex, i) => <li key={`str-${i}`}>"{ex.sentence}"</li>)}
-                                    {word.exampleSentences.by_tense?.map((ex, i) => <li key={`ten-${i}`}>"{ex.sentence}"</li>)}
+                                    {word.exampleSentences?.by_structure?.map((ex, i) => (
+                                        <li key={`str-${i}`}>
+                                            <span className="font-semibold">"{ex.sentence}"</span>
+                                            {ex.explanation && <p className="text-xs italic text-muted-foreground/80 pl-4">{ex.explanation}</p>}
+                                        </li>
+                                    ))}
+                                    {word.exampleSentences?.by_tense?.map((ex, i) => (
+                                        <li key={`ten-${i}`}>
+                                            <Badge variant="outline" className="mr-2">{ex.tense}</Badge> 
+                                            <span className="font-semibold">"{ex.sentence}"</span>
+                                        </li>
+                                    ))}
                                 </ul>
                             </DetailSection>
                         )}
