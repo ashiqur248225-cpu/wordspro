@@ -310,18 +310,21 @@ function WordsClientContent() {
 
   const handleDelete = async (id: string) => {
     try {
-        await deleteWord(id);
-        toast({ title: 'Word deleted successfully' });
-        // Instead of re-fetching, update the state directly for faster UI response
-        setAllWords(prevWords => prevWords.filter(word => word.id !== id));
+      await deleteWord(id);
+      toast({ title: 'Word deleted successfully' });
+      // Update the state directly for a faster and more reliable UI response
+      setAllWords(prevWords => prevWords.filter(word => word.id !== id));
     } catch (e: any) {
-        toast({
-            variant: "destructive",
-            title: "Error deleting word",
-            description: "Could not delete the word.",
-        });
+      toast({
+        variant: 'destructive',
+        title: 'Error deleting word',
+        description: 'Could not delete the word.',
+      });
+    } finally {
+      setWordToDelete(null);
     }
-  }
+  };
+
 
 const handleBulkImport = async () => {
     if (!importJson.trim()) {
@@ -523,13 +526,12 @@ const handleBulkImport = async () => {
                 </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setWordToDelete(null)}>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
-                    onClick={async () => {
-                    if (wordToDelete) {
-                        await handleDelete(wordToDelete);
-                    }
-                    setWordToDelete(null);
+                    onClick={() => {
+                        if (wordToDelete) {
+                            handleDelete(wordToDelete);
+                        }
                     }}
                 >
                     Continue
