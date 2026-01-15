@@ -39,7 +39,7 @@ export type Word = {
   word: string;
   meaning: string;
   meaning_explanation?: string;
-  partOfSpeech: 'noun' | 'verb' | 'adjective' | 'adverb' | 'pronoun' | 'preposition' | 'conjunction' | 'interjection' | 'other';
+  partOfSpeech: 'noun' | 'verb' | 'adjective' | 'adverb' | 'pronoun' | 'preposition' | 'conjunction' | 'interjection' | 'other' | 'Noun/Verb';
   syllables?: string[];
   
   // New detailed fields from JSON
@@ -97,5 +97,6 @@ export const partOfSpeechOptions: Word['partOfSpeech'][] = [
   'preposition',
   'conjunction',
   'interjection',
+  'Noun/Verb',
   'other',
 ];
