@@ -312,7 +312,6 @@ function WordsClientContent() {
     try {
       await deleteWord(id);
       toast({ title: 'Word deleted successfully' });
-      // Update the state directly for a faster and more reliable UI response
       setAllWords(prevWords => prevWords.filter(word => word.id !== id));
     } catch (e: any) {
       toast({
@@ -320,8 +319,6 @@ function WordsClientContent() {
         title: 'Error deleting word',
         description: 'Could not delete the word.',
       });
-    } finally {
-      setWordToDelete(null);
     }
   };
 
@@ -516,7 +513,7 @@ const handleBulkImport = async () => {
             </DialogContent>
         </Dialog>
 
-        <AlertDialog open={!!wordToDelete} onOpenChange={() => setWordToDelete(null)}>
+        <AlertDialog open={!!wordToDelete} onOpenChange={setWordToDelete}>
             <AlertDialogContent>
                 <AlertDialogHeader>
                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
