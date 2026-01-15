@@ -94,62 +94,24 @@ const wordSchema = z.object({
 type WordFormData = z.infer<typeof wordSchema>;
 
 // Bulk import schema
-const bulkImportWordFamilyDetailSchema = z.object({
-    word: z.string().optional(),
-    pronunciation: z.string().optional(),
-    meaning: z.string().optional(),
-}).optional();
-
-const bulkImportVerbFormDetailSchema = z.object({
-  word: z.string(),
-  pronunciation: z.string().optional(),
-  bangla_meaning: z.string().optional(),
-  usage_timing: z.string().optional(),
-});
-
-const bulkImportVerbFormsSchema = z.object({
-    v1_present: bulkImportVerbFormDetailSchema.optional(),
-    v2_past: bulkImportVerbFormDetailSchema.optional(),
-    v3_past_participle: bulkImportVerbFormDetailSchema.optional(),
-}).optional();
-
-const bulkImportExampleSentenceByStructureSchema = z.object({
-    type: z.string().optional(),
-    sentence: z.string(),
-    explanation: z.string().optional(),
-});
-
-const bulkImportExampleSentenceByTenseSchema = z.object({
-    tense: z.string().optional(),
-    sentence: z.string(),
-});
-
-
 const bulkImportWordSchema = z.array(z.object({
     word: z.string(),
     meaning: z.string(),
-    parts_of_speech: z.enum(partOfSpeechOptions),
+    parts_of_speech: z.preprocess(
+      (val) => String(val).toLowerCase(),
+      z.enum(partOfSpeechOptions)
+    ),
     syllables: z.array(z.string()).optional(),
-    word_family: z.object({
-        noun: bulkImportWordFamilyDetailSchema,
-        adjective: bulkImportWordFamilyDetailSchema,
-        adverb: bulkImportWordFamilyDetailSchema,
-        verb: bulkImportWordFamilyDetailSchema,
-        person_noun: bulkImportWordFamilyDetailSchema,
-        plural_noun: bulkImportWordFamilyDetailSchema.optional(),
-    }).optional(),
+    word_family: z.any().optional(),
     usage_distinction: z.string().optional(),
-    verb_forms: bulkImportVerbFormsSchema,
-    example_sentences: z.object({
-      by_structure: z.array(bulkImportExampleSentenceByStructureSchema).optional(),
-      by_tense: z.array(bulkImportExampleSentenceByTenseSchema).optional(),
-    }).optional(),
-    synonyms: z.array(z.object({ word: z.string(), bangla: z.string() })).optional(),
-    antonyms: z.array(z.object({ word: z.string(), bangla: z.string() })).optional(),
+    verb_forms: z.any().optional(),
+    example_sentences: z.any().optional(),
+    synonyms: z.array(z.any()).optional(),
+    antonyms: z.array(z.any()).optional(),
 }).transform(data => ({
     ...data,
     partOfSpeech: data.parts_of_speech,
-    exampleSentences: data.example_sentences,
+    exampleSentences: data.example_sentences ?? null,
     verb_forms: data.verb_forms ?? null,
 })));
 
@@ -239,20 +201,17 @@ function WordsClientContent() {
         });
     }
     
-    if (difficultyFilter && difficultyFilter !== 'All') {
+    if (difficultyFilter !== 'All') {
         const today = new Date().toDateString();
         words = words.filter(word => {
             if (difficultyFilter === "Today's") {
                 return new Date(word.createdAt).toDateString() === today;
             }
-            if (difficultyFilter === "Learned") {
-                return word.difficulty === 'Learned';
-            }
             return word.difficulty === difficultyFilter;
         });
     }
     
-    if (posFilter && posFilter !== 'All') {
+    if (posFilter !== 'All') {
         words = words.filter(word => word.partOfSpeech === posFilter);
     }
 
