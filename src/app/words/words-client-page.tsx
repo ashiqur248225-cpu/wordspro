@@ -312,7 +312,8 @@ function WordsClientContent() {
     try {
         await deleteWord(id);
         toast({ title: 'Word deleted successfully' });
-        await fetchWords();
+        // Instead of re-fetching, update the state directly for faster UI response
+        setAllWords(prevWords => prevWords.filter(word => word.id !== id));
     } catch (e: any) {
         toast({
             variant: "destructive",
