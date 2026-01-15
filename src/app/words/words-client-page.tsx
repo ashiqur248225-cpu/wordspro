@@ -1,4 +1,5 @@
 'use client';
+
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { PlusCircle, Upload, Filter, Search, MoreHorizontal, BookCopy } from 'lucide-react';
@@ -369,7 +370,7 @@ const handleBulkImport = async () => {
     toast({ 
       variant: 'destructive', 
       title: 'Import Failed', 
-      description: "JSON ফরম্যাট সঠিক নয়। দয়া করে ফরম্যাটটি চেক করুন।" 
+      description: "JSON format is not correct. Please check the format." 
     });
   }
 };
@@ -530,12 +531,35 @@ const handleBulkImport = async () => {
                 <DialogHeader>
                     <DialogTitle>Bulk Import Words</DialogTitle>
                     <DialogDescription>
-                        Paste a JSON array of words to import them in bulk, following the new detailed format.
+                        Paste your JSON array here. Ensure it follows the correct structure. See the example format below. Required fields are `word`, `meaning`, and `parts_of_speech`.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
                     <Textarea 
-                        placeholder="[&#10;  { &quot;word&quot;: &quot;example&quot;, &quot;meaning&quot;: &quot;...&quot;, ... },&#10;  ...&#10;]"
+                        placeholder='[
+  {
+    "word": "practice",
+    "meaning": "অনুশীলন করা",
+    "parts_of_speech": "Noun-Verb",
+    "syllables": ["prac", "tice"],
+    "word_family": {
+      "noun": { "word": "practice", "pronunciation": "প্র্যাকটিস", "meaning": "অনুশীলন বা প্রথা" }
+    },
+    "example_sentences": {
+      "by_tense": [
+        { "tense": "Present Simple", "sentence": "They practice cricket in the afternoon." }
+      ]
+    },
+    "synonyms": [
+      { "word": "exercise", "bangla": "চর্চা করা" }
+    ]
+  },
+  {
+    "word": "awareness",
+    "meaning": "সচেতনতা",
+    "parts_of_speech": "Noun"
+  }
+]'
                         value={importJson}
                         onChange={(e) => setImportJson(e.target.value)}
                         rows={15}
