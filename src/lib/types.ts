@@ -89,7 +89,7 @@ export type Note = {
 
 export type WordDifficulty = 'New' | 'Easy' | 'Medium' | 'Hard' | 'Learned';
 
-export const partOfSpeechOptions: Word['partOfSpeech'][] = [
+export const partOfSpeechOptions = [
   'noun',
   'verb',
   'adjective',
@@ -100,4 +100,4 @@ export const partOfSpeechOptions: Word['partOfSpeech'][] = [
   'interjection',
   'Noun/Verb',
   'other',
-];
+] as const;
