@@ -95,10 +95,10 @@ type WordFormData = z.infer<typeof wordSchema>;
 
 // Bulk import schema
 const bulkImportWordFamilyDetailSchema = z.object({
-    word: z.string(),
-    pronunciation: z.string(),
-    meaning: z.string(),
-});
+    word: z.string().optional(),
+    pronunciation: z.string().optional(),
+    meaning: z.string().optional(),
+}).optional();
 
 const bulkImportVerbFormDetailSchema = z.object({
   word: z.string().optional(),
@@ -121,17 +121,17 @@ const bulkImportExampleSentenceSchema = z.object({
 });
 
 
-const bulkImportWordSchema = z.object({
+const bulkImportWordSchema = z.array(z.object({
     word: z.string(),
     meaning: z.string(),
     parts_of_speech: z.enum(partOfSpeechOptions),
     word_family: z.object({
-      noun: bulkImportWordFamilyDetailSchema.optional(),
-      adjective: bulkImportWordFamilyDetailSchema.optional(),
-      adverb: bulkImportWordFamilyDetailSchema.optional(),
-      verb: bulkImportWordFamilyDetailSchema.optional(),
-      person_noun: bulkImportWordFamilyDetailSchema.optional(),
-      plural_noun: bulkImportWordFamilyDetailSchema.optional(),
+      noun: bulkImportWordFamilyDetailSchema,
+      adjective: bulkImportWordFamilyDetailSchema,
+      adverb: bulkImportWordFamilyDetailSchema,
+      verb: bulkImportWordFamilyDetailSchema,
+      person_noun: bulkImportWordFamilyDetailSchema,
+      plural_noun: bulkImportWordFamilyDetailSchema,
     }).optional(),
     usage_distinction: z.string().optional(),
     verb_forms: bulkImportVerbFormsSchema.optional(),
@@ -147,9 +147,7 @@ const bulkImportWordSchema = z.object({
     partOfSpeech: data.parts_of_speech,
     exampleSentences: data.example_sentences,
     verb_forms: data.verb_forms ?? null,
-}));
-
-const bulkImportSchema = z.array(bulkImportWordSchema);
+})));
 
 
 function WordsClientContent() {
@@ -269,7 +267,11 @@ function WordsClientContent() {
       synonyms: '',
       antonyms: '',
       exampleSentences: '',
-      verb_forms: null,
+      verb_forms: {
+        v1_present: { word: '' },
+        v2_past: { word: '' },
+        v3_past_participle: { word: '' },
+      },
     },
   });
 
@@ -357,7 +359,11 @@ function WordsClientContent() {
         synonyms: '',
         antonyms: '',
         exampleSentences: '',
-        verb_forms: null,
+        verb_forms: {
+          v1_present: { word: '' },
+          v2_past: { word: '' },
+          v3_past_participle: { word: '' },
+        },
     });
     setIsFormOpen(true);
   };
@@ -387,7 +393,7 @@ function WordsClientContent() {
     }
     try {
         const jsonData = JSON.parse(importJson);
-        const parsedData = bulkImportSchema.parse(jsonData);
+        const parsedData = bulkImportWordSchema.parse(jsonData);
         
         const result = await bulkAddWords(parsedData);
         
@@ -515,13 +521,13 @@ function WordsClientContent() {
                             <>
                                 <h4 className="col-span-2 font-semibold text-lg mt-4 border-b pb-2">Verb Forms</h4>
                                 <FormField control={form.control} name="verb_forms.v1_present.word" render={({ field }) => (
-                                    <FormItem><FormLabel>V1 (Present)</FormLabel><FormControl><Input placeholder="e.g., do" {...field} /></FormControl></FormItem>
+                                    <FormItem><FormLabel>V1 (Present)</FormLabel><FormControl><Input placeholder="e.g., do" {...field} value={field.value || ''} /></FormControl></FormItem>
                                 )} />
                                 <FormField control={form.control} name="verb_forms.v2_past.word" render={({ field }) => (
-                                    <FormItem><FormLabel>V2 (Past)</FormLabel><FormControl><Input placeholder="e.g., did" {...field} /></FormControl></FormItem>
+                                    <FormItem><FormLabel>V2 (Past)</FormLabel><FormControl><Input placeholder="e.g., did" {...field} value={field.value || ''} /></FormControl></FormItem>
                                 )} />
                                 <FormField control={form.control} name="verb_forms.v3_past_participle.word" render={({ field }) => (
-                                    <FormItem><FormLabel>V3 (Past Participle)</FormLabel><FormControl><Input placeholder="e.g., done" {...field} /></FormControl></FormItem>
+                                    <FormItem><FormLabel>V3 (Past Participle)</FormLabel><FormControl><Input placeholder="e.g., done" {...field} value={field.value || ''} /></FormControl></FormItem>
                                 )} />
                             </>
                         )}
