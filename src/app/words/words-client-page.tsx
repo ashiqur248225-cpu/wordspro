@@ -113,11 +113,15 @@ const bulkImportVerbFormsSchema = z.object({
     v3_past_participle: bulkImportVerbFormDetailSchema.optional(),
 }).nullable();
 
-const bulkImportExampleSentenceSchema = z.object({
+const bulkImportExampleSentenceByStructureSchema = z.object({
     type: z.string().optional(),
-    tense: z.string().optional(),
     sentence: z.string(),
     explanation: z.string().optional(),
+});
+
+const bulkImportExampleSentenceByTenseSchema = z.object({
+    tense: z.string().optional(),
+    sentence: z.string(),
 });
 
 
@@ -125,6 +129,7 @@ const bulkImportWordSchema = z.array(z.object({
     word: z.string(),
     meaning: z.string(),
     parts_of_speech: z.enum(partOfSpeechOptions),
+    syllables: z.array(z.string()).optional(),
     word_family: z.object({
       noun: bulkImportWordFamilyDetailSchema,
       adjective: bulkImportWordFamilyDetailSchema,
@@ -136,12 +141,11 @@ const bulkImportWordSchema = z.array(z.object({
     usage_distinction: z.string().optional(),
     verb_forms: bulkImportVerbFormsSchema.optional(),
     example_sentences: z.object({
-      by_structure: z.array(bulkImportExampleSentenceSchema).optional(),
-      by_tense: z.array(bulkImportExampleSentenceSchema).optional(),
+      by_structure: z.array(bulkImportExampleSentenceByStructureSchema).optional(),
+      by_tense: z.array(bulkImportExampleSentenceByTenseSchema).optional(),
     }).optional(),
     synonyms: z.array(z.object({ word: z.string(), bangla: z.string() })).optional(),
     antonyms: z.array(z.object({ word: z.string(), bangla: z.string() })).optional(),
-    syllables: z.array(z.string()).optional(),
 }).transform(data => ({
     ...data,
     partOfSpeech: data.parts_of_speech,
