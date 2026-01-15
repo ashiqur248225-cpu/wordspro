@@ -108,9 +108,9 @@ const bulkImportVerbFormDetailSchema = z.object({
 }).optional();
 
 const bulkImportVerbFormsSchema = z.object({
-    v1_present: bulkImportVerbFormDetailSchema,
-    v2_past: bulkImportVerbFormDetailSchema,
-    v3_past_participle: bulkImportVerbFormDetailSchema,
+    v1_present: bulkImportVerbFormDetailSchema.optional(),
+    v2_past: bulkImportVerbFormDetailSchema.optional(),
+    v3_past_participle: bulkImportVerbFormDetailSchema.optional(),
 }).nullable();
 
 const bulkImportExampleSentenceSchema = z.object({
@@ -131,6 +131,7 @@ const bulkImportWordSchema = z.object({
       adverb: bulkImportWordFamilyDetailSchema,
       verb: bulkImportWordFamilyDetailSchema,
       person_noun: bulkImportWordFamilyDetailSchema,
+      plural_noun: bulkImportWordFamilyDetailSchema,
     }).optional(),
     usage_distinction: z.string().optional(),
     verb_forms: bulkImportVerbFormsSchema.optional(),

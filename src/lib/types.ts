@@ -49,6 +49,7 @@ export type Word = {
       adverb?: WordFamilyDetail;
       verb?: WordFamilyDetail;
       person_noun?: WordFamilyDetail;
+      plural_noun?: WordFamilyDetail;
   };
   usage_distinction?: string;
   verb_forms?: VerbForms | null;
