@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { PlusCircle, Upload, Filter, Search, MoreHorizontal, BookCopy } from 'lucide-react';
+import { PlusCircle, Upload, Filter, Search, MoreHorizontal, BookCopy, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -232,8 +232,6 @@ function WordsClientContent() {
   const examplesToArray = (str: string | undefined) => {
     if (!str) return null;
     const sentences = str.split('\n').map(s => s.trim()).filter(Boolean);
-    // This is a simplification. The detailed structure is lost when editing via simple textarea.
-    // For a full implementation, the form would need to be much more complex.
     return { by_tense: sentences.map(s => ({ sentence: s })) };
   };
 
@@ -329,10 +327,8 @@ const handleBulkImport = async () => {
     const jsonData = JSON.parse(importJson);
     
     const formattedData = jsonData.map((item: any) => {
-      // parts_of_speech হ্যান্ডলিং (যেমন: "Noun-Verb" বা "Noun/Verb" থেকে "noun" করা)
       let pos = item.parts_of_speech || 'noun';
       
-      // হাইফেন (-) বা স্লাশ (/) থাকলে প্রথম অংশটি আলাদা করা
       const separator = pos.includes('-') ? '-' : pos.includes('/') ? '/' : null;
       if (separator) {
         pos = pos.split(separator)[0];
@@ -340,11 +336,10 @@ const handleBulkImport = async () => {
 
       return {
         ...item,
-        partOfSpeech: pos.toLowerCase().trim(), // ছোট হাতের অক্ষরে রূপান্তর (যেমন: noun, verb)
+        partOfSpeech: pos.toLowerCase().trim(),
         syllables: Array.isArray(item.syllables) ? item.syllables : [],
         synonyms: Array.isArray(item.synonyms) ? item.synonyms : [],
         antonyms: Array.isArray(item.antonyms) ? item.antonyms : [],
-        // example_sentences অবজেক্ট সরাসরি সেভ হবে
         exampleSentences: item.example_sentences || { by_tense: [], by_structure: [] },
         verb_forms: item.verb_forms || null,
         difficulty: 'New', 
@@ -370,10 +365,11 @@ const handleBulkImport = async () => {
     toast({ 
       variant: 'destructive', 
       title: 'Import Failed', 
-      description: "JSON format is not correct. Please check the format." 
+      description: "JSON ফরম্যাট সঠিক নয়। দয়া করে ফরম্যাটটি চেক করুন।" 
     });
   }
 };
+
 
   const handleStartExam = (quizType: string) => {
       if (filteredWords.length === 0) {
@@ -384,9 +380,16 @@ const handleBulkImport = async () => {
           });
           return;
       }
-      // Instead of passing IDs, we can just pass the difficulty filter
       router.push(`/learn?quizType=${quizType}&difficulty=${difficultyFilter}`);
   };
+  
+  const handleStartFlashcards = () => {
+    const query = new URLSearchParams();
+    if (difficultyFilter && difficultyFilter !== 'All') query.set('difficulty', difficultyFilter);
+    if (posFilter && posFilter !== 'All') query.set('pos', posFilter);
+    if (searchTerm) query.set('q', searchTerm);
+    router.push(`/flashcards?${query.toString()}`);
+  }
 
   const handleRowClick = (word: Word) => {
     const query = new URLSearchParams();
@@ -531,7 +534,7 @@ const handleBulkImport = async () => {
                 <DialogHeader>
                     <DialogTitle>Bulk Import Words</DialogTitle>
                     <DialogDescription>
-                        Paste your JSON array here. Ensure it follows the correct structure. See the example format below. Required fields are `word`, `meaning`, and `parts_of_speech`.
+                        Paste your JSON array here. Ensure it follows the correct structure. Required fields are `word`, `meaning`, and `parts_of_speech`.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
@@ -547,7 +550,7 @@ const handleBulkImport = async () => {
     },
     "example_sentences": {
       "by_tense": [
-        { "tense": "Present Simple", "sentence": "They practice cricket in the afternoon." }
+        { "tense": "Present Simple", "sentence": "They practice cricket every afternoon." }
       ]
     },
     "synonyms": [
@@ -613,6 +616,11 @@ const handleBulkImport = async () => {
                     </DropdownMenuRadioGroup>
                 </DropdownMenuContent>
             </DropdownMenu>
+
+            <Button variant="outline" size="sm" className="h-9 gap-1" onClick={handleStartFlashcards}>
+                <CreditCard className="h-3.5 w-3.5" />
+                Flash Cards
+            </Button>
 
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -697,8 +705,6 @@ const handleBulkImport = async () => {
 }
 
 export function WordsClientPage() {
-    // This outer component ensures Suspense can be used.
-    // The actual client logic is in WordsClientContent.
     return (
         <Suspense fallback={<div>Loading...</div>}>
             <WordsClientContent />
