@@ -407,7 +407,10 @@ const WordFamilyRow = ({ label, data }: { label: string, data?: WordFamilyDetail
                                 {word.exampleSentences.by_structure.map((ex, i) => (
                                     <div key={i}>
                                         <p className="font-semibold text-lg">"{ex.sentence}"</p>
-                                        <p className="text-sm text-muted-foreground"><Badge variant="outline" className="mr-2">{ex.type}</Badge>{ex.explanation}</p>
+                                        <div className="text-sm text-muted-foreground">
+                                            <Badge variant="outline" className="mr-2">{ex.type}</Badge>
+                                            {ex.explanation}
+                                        </div>
                                     </div>
                                 ))}
                                 </div>
