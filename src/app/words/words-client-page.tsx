@@ -133,7 +133,7 @@ const bulkImportWordSchema = z.object({
       person_noun: bulkImportWordFamilyDetailSchema,
     }).optional(),
     usage_distinction: z.string().optional(),
-    verb_forms: bulkImportVerbFormsSchema,
+    verb_forms: bulkImportVerbFormsSchema.optional(),
     example_sentences: z.object({
       by_structure: z.array(bulkImportExampleSentenceSchema).optional(),
       by_tense: z.array(bulkImportExampleSentenceSchema).optional(),
@@ -145,6 +145,7 @@ const bulkImportWordSchema = z.object({
     ...data,
     partOfSpeech: data.parts_of_speech,
     exampleSentences: data.example_sentences,
+    verb_forms: data.verb_forms ?? null,
 }));
 
 const bulkImportSchema = z.array(bulkImportWordSchema);
@@ -474,13 +475,13 @@ function WordsClientContent() {
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" className="h-9 gap-1" onClick={() => setIsImportOpen(true)}>
                 <Upload className="h-3.5 w-3.5" />
-                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                <span className="sr-only sm:not-sr-only sm:whitespace-rap">
                   Import
                 </span>
               </Button>
               <Button size="sm" className="h-9 gap-1" onClick={handleAddNew}>
                 <PlusCircle className="h-3.5 w-3.5" />
-                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                <span className="sr-only sm:not-sr-only sm:whitespace-rap">
                   Add Word
                 </span>
               </Button>
