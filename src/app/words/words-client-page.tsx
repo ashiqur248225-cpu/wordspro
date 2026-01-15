@@ -111,7 +111,7 @@ const bulkImportVerbFormsSchema = z.object({
     v1_present: bulkImportVerbFormDetailSchema.optional(),
     v2_past: bulkImportVerbFormDetailSchema.optional(),
     v3_past_participle: bulkImportVerbFormDetailSchema.optional(),
-}).nullable();
+});
 
 const bulkImportExampleSentenceByStructureSchema = z.object({
     type: z.string().optional(),
