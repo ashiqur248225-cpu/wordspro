@@ -3,22 +3,21 @@ import type { SVGProps } from 'react';
 export function Logo(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
+      viewBox="0 0 36 36"
       xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      aria-hidden="true"
+      role="img"
+      preserveAspectRatio="xMidYMid meet"
       {...props}
     >
-      <path d="M4.26 10.18 2 12.44l6.01 6.01 3.23-3.23" />
-      <path d="M8.01 18.45 12 14.44l3.99 3.99L22 12.44l-2.26-2.26" />
-      <path d="m12 14.44 3.23-3.23" />
-      <path d="M16.74 6.29 14.48 8.55" />
-      <path d="M12 2 9.52 4.48" />
+      <path
+        fill="#3B88C3"
+        d="M36 32a4 4 0 0 1-4 4H4a4 4 0 0 1-4-4V4a4 4 0 0 1 4-4h28a4 4 0 0 1 4 4v28z"
+      ></path>
+      <path
+        fill="#FFF"
+        d="M4.298 9.838a3.929 3.929 0 0 1-.124-1.054c0-.992.837-2.046 2.201-2.046c1.488 0 2.202.868 2.48 2.232l2.636 13.177h.062l4.031-13.58c.341-1.116 1.272-1.83 2.418-1.83c1.148 0 2.077.713 2.419 1.83l4.03 13.58h.062L27.15 8.97c.277-1.364.992-2.232 2.48-2.232c1.363 0 2.201 1.054 2.201 2.046c0 .434-.031.651-.125 1.054l-3.936 16.93c-.311 1.303-1.334 2.418-3.069 2.418a3.16 3.16 0 0 1-3.069-2.263l-3.597-11.969h-.062l-3.597 11.969a3.163 3.163 0 0 1-3.07 2.263c-1.736 0-2.759-1.115-3.07-2.418L4.298 9.838z"
+      ></path>
     </svg>
   );
 }
