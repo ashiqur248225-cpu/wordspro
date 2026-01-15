@@ -93,71 +93,6 @@ const wordSchema = z.object({
 
 type WordFormData = z.infer<typeof wordSchema>;
 
-// Bulk import schema
-const bulkImportVerbFormDetailSchema = z.object({
-  word: z.string(),
-  pronunciation: z.string().optional(),
-  bangla_meaning: z.string().optional(),
-  usage_timing: z.string().optional(),
-});
-
-const bulkImportVerbFormsSchema = z.object({
-    v1_present: bulkImportVerbFormDetailSchema.optional(),
-    v2_past: bulkImportVerbFormDetailSchema.optional(),
-    v3_past_participle: bulkImportVerbFormDetailSchema.optional(),
-}).optional();
-
-const bulkImportExampleSentenceSchema = z.object({
-    type: z.string().optional(),
-    sentence: z.string(),
-    explanation: z.string().optional(),
-});
-
-const bulkImportExampleSentenceByTenseSchema = z.object({
-    tense: z.string().optional(),
-    sentence: z.string(),
-});
-
-const bulkImportWordFamilyDetailSchema = z.object({
-    word: z.string(),
-    pronunciation: z.string(),
-    meaning: z.string(),
-});
-
-const bulkImportWordFamilySchema = z.object({
-    noun: bulkImportWordFamilyDetailSchema.optional(),
-    adjective: bulkImportWordFamilyDetailSchema.optional(),
-    adverb: bulkImportWordFamilyDetailSchema.optional(),
-    verb: bulkImportWordFamilyDetailSchema.optional(),
-    person_noun: bulkImportWordFamilyDetailSchema.optional(),
-    plural_noun: bulkImportWordFamilyDetailSchema.optional(),
-}).optional();
-
-
-const bulkImportWordSchema = z.array(z.object({
-    word: z.string(),
-    meaning: z.string(),
-    parts_of_speech: z.preprocess(
-      (val) => String(val).toLowerCase().replace('-', '/'),
-      z.enum(partOfSpeechOptions)
-    ),
-    syllables: z.array(z.string()).optional(),
-    word_family: bulkImportWordFamilySchema,
-    usage_distinction: z.string().optional(),
-    verb_forms: bulkImportVerbFormsSchema,
-    example_sentences: z.object({
-        by_structure: z.array(bulkImportExampleSentenceSchema).optional(),
-        by_tense: z.array(bulkImportExampleSentenceByTenseSchema).optional(),
-    }).optional(),
-    synonyms: z.array(z.object({ word: z.string(), bangla: z.string() })).optional(),
-    antonyms: z.array(z.object({ word: z.string(), bangla: z.string() })).optional(),
-}).transform(data => data.map(item => ({
-    ...item,
-    partOfSpeech: item.parts_of_speech,
-    exampleSentences: item.example_sentences,
-    verb_forms: item.verb_forms ?? null,
-}))));
-
 
 function WordsClientContent() {
   const [allWords, setAllWords] = useState<Word[]>([]);
@@ -388,49 +323,56 @@ function WordsClientContent() {
     }
   }
 
-  const handleBulkImport = async () => {
-    if (!importJson.trim()) {
-        toast({
-            variant: 'destructive',
-            title: 'Input Required',
-            description: 'Please paste the JSON content to import.',
-        });
-        return;
-    }
-    try {
-        const jsonData = JSON.parse(importJson);
-        const parsedData = bulkImportWordSchema.parse(jsonData);
-        
-        const result = await bulkAddWords(parsedData as any);
-        
-        toast({
-            title: 'Bulk Import Complete',
-            description: `${result.successCount} words imported successfully. ${result.errorCount} failed.`,
-        });
+const handleBulkImport = async () => {
+  try {
+    const jsonData = JSON.parse(importJson);
+    
+    const formattedData = jsonData.map((item: any) => {
+      // parts_of_speech হ্যান্ডলিং (যেমন: "Noun-Verb" বা "Noun/Verb" থেকে "noun" করা)
+      let pos = item.parts_of_speech || 'noun';
+      
+      // হাইফেন (-) বা স্লাশ (/) থাকলে প্রথম অংশটি আলাদা করা
+      const separator = pos.includes('-') ? '-' : pos.includes('/') ? '/' : null;
+      if (separator) {
+        pos = pos.split(separator)[0];
+      }
 
-        if (result.errorCount > 0) {
-            console.error('Import errors:', result.errors);
-        }
+      return {
+        ...item,
+        partOfSpeech: pos.toLowerCase().trim(), // ছোট হাতের অক্ষরে রূপান্তর (যেমন: noun, verb)
+        syllables: Array.isArray(item.syllables) ? item.syllables : [],
+        synonyms: Array.isArray(item.synonyms) ? item.synonyms : [],
+        antonyms: Array.isArray(item.antonyms) ? item.antonyms : [],
+        // example_sentences অবজেক্ট সরাসরি সেভ হবে
+        exampleSentences: item.example_sentences || { by_tense: [], by_structure: [] },
+        verb_forms: item.verb_forms || null,
+        difficulty: 'New', 
+        createdAt: new Date().toISOString(),
+        correct_count: 0,
+        wrong_count: { spelling: 0, meaning: 0, synonym: 0, antonym: 0 },
+        total_exams: 0,
+        correct_streak: 0
+      };
+    });
 
-        await fetchWords();
-        setIsImportOpen(false);
-        setImportJson('');
-
-    } catch (error: any) {
-        let description = "An unknown error occurred.";
-        if (error instanceof z.ZodError) {
-            description = "JSON data does not match the required format. Check console for details.";
-            console.error(error.errors);
-        } else if (error instanceof SyntaxError) {
-            description = "Invalid JSON format. Please check your syntax.";
-        }
-        toast({
-            variant: 'destructive',
-            title: 'Import Failed',
-            description: description,
-        });
-    }
-  };
+    const result = await bulkAddWords(formattedData);
+    toast({ 
+      title: 'Import Successful', 
+      description: `${result.successCount} words have been added to your database.` 
+    });
+    
+    setIsImportOpen(false);
+    setImportJson('');
+    fetchWords();
+  } catch (e: any) {
+    console.error("Import Error:", e);
+    toast({ 
+      variant: 'destructive', 
+      title: 'Import Failed', 
+      description: "JSON ফরম্যাট সঠিক নয়। দয়া করে ফরম্যাটটি চেক করুন।" 
+    });
+  }
+};
 
   const handleStartExam = (quizType: string) => {
       if (filteredWords.length === 0) {
