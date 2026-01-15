@@ -84,30 +84,23 @@ function WordDetailsPageInternal() {
     let selectedVoice: SpeechSynthesisVoice | undefined;
 
     if (accent === 'UK') {
-      selectedVoice = allVoices.find(voice => voice.lang === 'en-GB' && (voice.name.includes('Google') || voice.name.includes('Daniel')));
-      if (!selectedVoice) {
-        selectedVoice = allVoices.find(voice => voice.lang === 'en-GB');
-      }
+        selectedVoice = allVoices.find(voice => voice.lang === 'en-GB' && (voice.name.includes('Google') || voice.name.includes('Daniel') || voice.name.toLowerCase().includes('united kingdom')));
+        if (!selectedVoice) selectedVoice = allVoices.find(voice => voice.lang === 'en-GB');
     } else { // US accent
-      selectedVoice = allVoices.find(voice => voice.lang === 'en-US' && (voice.name.includes('Google') || voice.name.includes('Alex')));
-      if (!selectedVoice) {
-         selectedVoice = allVoices.find(voice => voice.lang === 'en-US');
-      }
+        selectedVoice = allVoices.find(voice => voice.lang === 'en-US' && (voice.name.includes('Google') || voice.name.includes('Alex') || voice.name.toLowerCase().includes('united states')));
+        if (!selectedVoice) selectedVoice = allVoices.find(voice => voice.lang === 'en-US');
     }
     
-    // Fallback to any english voice if specific accent not found
     if (!selectedVoice) {
         selectedVoice = allVoices.find(voice => voice.lang.startsWith('en-'));
     }
 
     utterance.voice = selectedVoice || null;
-    utterance.volume = volume[0]; // 0 to 1
-    utterance.rate = speed[0]; // 0.1 to 10
-    utterance.pitch = 1; // 0 to 2
+    utterance.volume = volume[0];
+    utterance.rate = speed[0];
+    utterance.pitch = 1;
 
-    utterance.onend = () => {
-        setIsPlaying(null);
-    };
+    utterance.onend = () => setIsPlaying(null);
     utterance.onerror = (event) => {
         if (event.error !== 'interrupted') {
           console.error('Speech synthesis error:', event.error);
@@ -162,7 +155,13 @@ const WordFamilyRow = ({ label, data }: { label: string, data?: WordFamilyDetail
         <TableRow>
             <TableCell className="font-medium capitalize">{label}</TableCell>
             <TableCell>
-                 <p className="font-semibold">{data.word}</p>
+                 <p 
+                    className="font-semibold cursor-pointer flex items-center gap-2"
+                    onClick={() => handlePlayAudio(data.word)}
+                >
+                    {data.word}
+                    <Volume2 className={`inline h-4 w-4 text-muted-foreground ${isPlaying === data.word ? 'animate-pulse text-primary' : ''}`} />
+                 </p>
                  <p className="text-sm text-muted-foreground">{data.pronunciation}</p>
             </TableCell>
             <TableCell>{data.meaning}</TableCell>
@@ -458,9 +457,9 @@ const WordFamilyRow = ({ label, data }: { label: string, data?: WordFamilyDetail
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                <VerbFormRow label="Present (V1)" data={word.verb_forms?.v1_present} />
-                                <VerbFormRow label="Past (V2)" data={word.verb_forms?.v2_past} />
-                                <VerbFormRow label="Past Participle (V3)" data={word.verb_forms?.v3_past_participle} />
+                                <VerbFormRow label="Present (V1)" verbData={word.verb_forms?.v1_present} />
+                                <VerbFormRow label="Past (V2)" verbData={word.verb_forms?.v2_past} />
+                                <VerbFormRow label="Past Participle (V3)" verbData={word.verb_forms?.v3_past_participle} />
                             </TableBody>
                         </Table>
                     </DetailCard>
