@@ -22,7 +22,7 @@ function DetailCard({ title, children, defaultOpen = true, contentClassName }: {
       <CardHeader>
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
-      <CardContent className={contentClassName}>{children}</CardContent>
+      <CardContent className={cn(contentClassName)}>{children}</CardContent>
     </Card>
   );
 }
@@ -122,25 +122,28 @@ function WordDetailsPageInternal() {
     isHighlighted?: boolean;
   }) => {
     if (!data || !data.word) return null;
+    const isActive = isPlaying === data.word;
 
     return (
       <div
+        onClick={() => handlePlayAudio(data.word!)}
         className={cn(
-          "grid grid-cols-3 items-center gap-4 py-4 px-2",
-          isHighlighted && "bg-muted/40 rounded-lg -mx-2 px-4"
+          "grid grid-cols-3 items-center gap-4 py-3 rounded-lg -mx-2 px-2 cursor-pointer transition-colors hover:bg-muted/50",
+          isHighlighted && !isActive && "bg-muted/40",
+          isActive && "bg-primary/20"
         )}
       >
-        <div className="font-semibold text-muted-foreground">{label}</div>
+        <div className="font-semibold text-muted-foreground px-2">{label}</div>
         <div>
           <div
-            className="font-semibold text-lg cursor-pointer flex items-center gap-2"
-            onClick={() => handlePlayAudio(data.word!)}
+            className="font-semibold text-lg flex items-center gap-2"
           >
             <span>{data.word}</span>
             <Volume2
-              className={`h-4 w-4 text-muted-foreground ${
-                isPlaying === data.word ? "animate-pulse text-primary" : ""
-              }`}
+              className={cn(
+                "h-4 w-4 text-muted-foreground",
+                isActive && "animate-pulse text-primary"
+              )}
             />
           </div>
           {data.pronunciation && (
@@ -156,32 +159,41 @@ function WordDetailsPageInternal() {
 const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
     const wordText = typeof item === 'string' ? item : item.word;
     const bangla = typeof item !== 'string' ? item.bangla : undefined;
+    const isActive = isPlaying === wordText;
 
     return (
-        <Badge 
-            variant="secondary" 
-            className="text-base px-3 py-1 cursor-pointer flex items-center gap-2"
+        <Badge
+            variant={isActive ? 'default' : 'secondary'}
+            className={cn(
+                "text-base px-3 py-1 cursor-pointer flex items-center gap-2 transition-colors",
+            )}
             onClick={() => handlePlayAudio(wordText)}
         >
             <span>{wordText}</span>
-            {bangla && <span className="text-sm text-muted-foreground">({bangla})</span>}
-            <Volume2 className={`inline h-4 w-4 text-muted-foreground ${isPlaying === wordText ? 'animate-pulse text-primary' : ''}`} />
+            {bangla && <span className={cn("text-sm", isActive ? 'text-primary-foreground/80' : 'text-muted-foreground')}>({bangla})</span>}
+            <Volume2 className={cn("inline h-4 w-4", isActive ? 'text-primary-foreground animate-pulse' : 'text-muted-foreground')} />
         </Badge>
     );
 };
 
 const WordFamilyRow = ({ label, data }: { label: string, data?: WordFamilyDetail }) => {
     if (!data) return null;
+    const isActive = isPlaying === data.word;
     return (
-        <TableRow>
+        <TableRow
+            onClick={() => handlePlayAudio(data.word)}
+            className={cn(
+                "cursor-pointer transition-colors hover:bg-muted/50",
+                isActive && "bg-primary/20"
+            )}
+        >
             <TableCell className="font-medium capitalize">{label}</TableCell>
             <TableCell>
                  <p 
-                    className="font-semibold cursor-pointer flex items-center gap-2"
-                    onClick={() => handlePlayAudio(data.word)}
+                    className="font-semibold flex items-center gap-2"
                 >
                     {data.word}
-                    <Volume2 className={`inline h-4 w-4 text-muted-foreground ${isPlaying === data.word ? 'animate-pulse text-primary' : ''}`} />
+                    <Volume2 className={cn("inline h-4 w-4 text-muted-foreground", isActive && 'animate-pulse text-primary')} />
                  </p>
                  <p className="text-sm text-muted-foreground">{data.pronunciation}</p>
             </TableCell>
@@ -312,7 +324,7 @@ const WordFamilyRow = ({ label, data }: { label: string, data?: WordFamilyDetail
                     <p className="text-xl text-muted-foreground capitalize">{word.partOfSpeech}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" onClick={() => handlePlayAudio(word.word)} disabled={!!isPlaying}>
+                    <Button variant="outline" size="icon" onClick={() => handlePlayAudio(word.word)}>
                         <Volume2 className={isPlaying === word.word ? 'animate-pulse text-primary' : ''} />
                     </Button>
                     <Popover>
@@ -513,3 +525,5 @@ export default function WordDetailsPage() {
         </Suspense>
     )
 }
+
+    
