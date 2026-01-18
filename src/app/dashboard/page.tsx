@@ -9,8 +9,8 @@ export default function Dashboard() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
       <StatsCards />
-      <div className="w-full overflow-x-auto pb-2 sm:overflow-visible">
-        <div className="flex gap-4 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+      <div className="w-full">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
           <WordReviewCard difficulty="Hard" />
           <WordReviewCard difficulty="Medium" />
           <WordReviewCard difficulty="Easy" />
