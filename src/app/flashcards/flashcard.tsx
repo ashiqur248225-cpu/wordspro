@@ -5,6 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Volume2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import './flashcard.css';
 
 interface FlashCardProps {
@@ -57,8 +60,50 @@ const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
 
 export function FlashCard({ word }: FlashCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   if (!word) return null;
+  
+  const handlePlayAudio = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card from flipping
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+        console.error('Speech synthesis not supported.');
+        return;
+    }
+    
+    if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        if (isPlaying) {
+          setIsPlaying(false);
+          return;
+        }
+    }
+    
+    setIsPlaying(true);
+
+    const utterance = new SpeechSynthesisUtterance(word.word);
+    
+    const allVoices = window.speechSynthesis.getVoices();
+    let selectedVoice = allVoices.find(voice => voice.lang === 'en-US' && (voice.name.includes('Google') || voice.name.includes('Alex')));
+     if (!selectedVoice) {
+        selectedVoice = allVoices.find(voice => voice.lang.startsWith('en-'));
+    }
+
+    utterance.voice = selectedVoice || null;
+    utterance.volume = 1;
+    utterance.rate = 1;
+    utterance.pitch = 1;
+
+    utterance.onend = () => setIsPlaying(false);
+    utterance.onerror = (event) => {
+        if (event.error !== 'interrupted') {
+          console.error('Speech synthesis error:', event.error);
+        }
+        setIsPlaying(false);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
   
   const hasVerbForms = word.verb_forms && (word.verb_forms.v1_present?.word || word.verb_forms.v2_past?.word || word.verb_forms.v3_past_participle?.word);
   const hasWordFamily = word.word_family && Object.values(word.word_family).some(v => v);
@@ -72,7 +117,12 @@ export function FlashCard({ word }: FlashCardProps) {
              <ScrollArea className="h-full">
                 <div className="p-6">
                     <CardHeader className="text-center">
-                        <CardTitle className="text-4xl font-bold">{word.word}</CardTitle>
+                        <div className="flex items-center justify-center gap-2">
+                            <CardTitle className="text-4xl font-bold">{word.word}</CardTitle>
+                             <Button variant="ghost" size="icon" onClick={handlePlayAudio}>
+                                <Volume2 className={cn("h-7 w-7 text-muted-foreground", isPlaying && "animate-pulse text-primary")} />
+                            </Button>
+                        </div>
                         <CardDescription className="text-xl capitalize">{word.partOfSpeech}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
