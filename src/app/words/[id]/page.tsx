@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 
 function DetailCard({ title, children, defaultOpen = true, contentClassName }: { title: string; children: React.ReactNode; defaultOpen?: boolean, contentClassName?: string }) {
   if (!children) return null;
@@ -111,26 +112,46 @@ function WordDetailsPageInternal() {
     window.speechSynthesis.speak(utterance);
   };
 
-const VerbFormRow = ({ label, data }: { label: string, data?: VerbFormDetail }) => {
+  const VerbFormItem = ({
+    label,
+    data,
+    isHighlighted = false,
+  }: {
+    label: string;
+    data?: VerbFormDetail;
+    isHighlighted?: boolean;
+  }) => {
     if (!data || !data.word) return null;
+
     return (
-        <TableRow>
-            <TableCell className="font-medium">{label}</TableCell>
-            <TableCell>
-                <p 
-                    className="font-semibold cursor-pointer flex items-center gap-2"
-                    onClick={() => handlePlayAudio(data.word!)}
-                >
-                    {data.word} 
-                    <Volume2 className={`inline h-4 w-4 text-muted-foreground ${isPlaying === data.word ? 'animate-pulse text-primary' : ''}`} />
-                </p>
-                <p className="text-sm text-muted-foreground">{data.pronunciation}</p>
-            </TableCell>
-            <TableCell>{data.bangla_meaning}</TableCell>
-            <TableCell className="text-sm text-muted-foreground text-right hidden sm:table-cell">{data.usage_timing}</TableCell>
-        </TableRow>
+      <div
+        className={cn(
+          "grid grid-cols-3 items-center gap-4 py-4 px-2",
+          isHighlighted && "bg-muted/40 rounded-lg -mx-2 px-4"
+        )}
+      >
+        <div className="font-semibold text-muted-foreground">{label}</div>
+        <div>
+          <div
+            className="font-semibold text-lg cursor-pointer flex items-center gap-2"
+            onClick={() => handlePlayAudio(data.word!)}
+          >
+            <span>{data.word}</span>
+            <Volume2
+              className={`h-4 w-4 text-muted-foreground ${
+                isPlaying === data.word ? "animate-pulse text-primary" : ""
+              }`}
+            />
+          </div>
+          {data.pronunciation && (
+            <p className="text-sm text-primary">{data.pronunciation}</p>
+          )}
+        </div>
+        <div className="text-lg">{data.bangla_meaning}</div>
+      </div>
     );
-};
+  };
+
 
 const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
     const wordText = typeof item === 'string' ? item : item.word;
@@ -446,23 +467,28 @@ const WordFamilyRow = ({ label, data }: { label: string, data?: WordFamilyDetail
                 )}
 
                 {hasVerbForms && (
-                    <DetailCard title="Verb Forms" contentClassName="pt-6">
-                         <Table>
-                            <TableHeader>
-                                <TableRow>
-                                <TableHead>Form</TableHead>
-                                <TableHead>Word & Pronunciation</TableHead>
-                                <TableHead>Bangla Meaning</TableHead>
-                                <TableHead className="text-right hidden sm:table-cell">Usage</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                <VerbFormRow label="Present (V1)" verbData={word.verb_forms?.v1_present} />
-                                <VerbFormRow label="Past (V2)" verbData={word.verb_forms?.v2_past} />
-                                <VerbFormRow label="Past Participle (V3)" verbData={word.verb_forms?.v3_past_participle} />
-                            </TableBody>
-                        </Table>
-                    </DetailCard>
+                    <DetailCard title="Verb Forms">
+                      <div className="grid grid-cols-3 gap-4 px-2 pb-4 border-b">
+                          <h4 className="font-semibold text-sm text-muted-foreground">Form</h4>
+                          <h4 className="font-semibold text-sm text-muted-foreground">Word & Pronunciation</h4>
+                          <h4 className="font-semibold text-sm text-muted-foreground">Bengali Meaning</h4>
+                      </div>
+                      <div className="flex flex-col divide-y divide-border">
+                          <VerbFormItem
+                              label="Present (V1)"
+                              data={word.verb_forms?.v1_present}
+                          />
+                          <VerbFormItem
+                              label="Past (V2)"
+                              data={word.verb_forms?.v2_past}
+                              isHighlighted
+                          />
+                          <VerbFormItem
+                              label="Past Participle (V3)"
+                              data={word.verb_forms?.v3_past_participle}
+                          />
+                      </div>
+                  </DetailCard>
                 )}
 
             </main>
