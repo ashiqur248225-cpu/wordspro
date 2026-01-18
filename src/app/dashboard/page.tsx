@@ -7,15 +7,17 @@ import { RecentActivity } from './recent-activity';
 
 export default function Dashboard() {
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6 overflow-x-auto">
+    <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
       <StatsCards />
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <WordReviewCard difficulty="Hard" />
-        <WordReviewCard difficulty="Medium" />
-        <WordReviewCard difficulty="Easy" />
-        <WordReviewCard difficulty="New" />
-        <WordReviewCard difficulty="Learned" />
-        <WordReviewCard difficulty="All" />
+      <div className="w-full overflow-x-auto pb-2 sm:overflow-visible">
+        <div className="flex gap-4 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+          <WordReviewCard difficulty="Hard" />
+          <WordReviewCard difficulty="Medium" />
+          <WordReviewCard difficulty="Easy" />
+          <WordReviewCard difficulty="New" />
+          <WordReviewCard difficulty="Learned" />
+          <WordReviewCard difficulty="All" />
+        </div>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-4">
         <Card className="col-span-4">
