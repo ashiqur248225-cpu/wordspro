@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Book, CheckCircle, Target, Brain } from 'lucide-react';
 import {
   Card,
@@ -38,35 +39,41 @@ export function StatsCards() {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Words</CardTitle>
-          <Book className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.totalWords}</div>
-          <p className="text-xs text-muted-foreground">in your vocabulary</p>
-        </CardContent>
+      <Card asChild className="hover:bg-muted/50 transition-colors cursor-pointer">
+        <Link href="/words">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Words</CardTitle>
+            <Book className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalWords}</div>
+            <p className="text-xs text-muted-foreground">in your vocabulary</p>
+          </CardContent>
+        </Link>
       </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Learned Words</CardTitle>
-          <CheckCircle className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.learnedWords}</div>
-          <p className="text-xs text-muted-foreground">marked as 'Learned'</p>
-        </CardContent>
+      <Card asChild className="hover:bg-muted/50 transition-colors cursor-pointer">
+        <Link href="/words?difficulty=Learned">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Learned Words</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.learnedWords}</div>
+            <p className="text-xs text-muted-foreground">marked as 'Learned'</p>
+          </CardContent>
+        </Link>
       </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">To Review</CardTitle>
-          <Brain className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.wordsToReview}</div>
-          <p className="text-xs text-muted-foreground">'Hard' or 'Medium'</p>
-        </CardContent>
+      <Card asChild className="hover:bg-muted/50 transition-colors cursor-pointer">
+        <Link href="/learn?difficulty=Hard">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">To Review</CardTitle>
+            <Brain className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.wordsToReview}</div>
+            <p className="text-xs text-muted-foreground">'Hard' or 'Medium'</p>
+          </CardContent>
+        </Link>
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
