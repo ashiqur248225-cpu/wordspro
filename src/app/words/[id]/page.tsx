@@ -14,14 +14,14 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-function DetailCard({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+function DetailCard({ title, children, defaultOpen = true, contentClassName }: { title: string; children: React.ReactNode; defaultOpen?: boolean, contentClassName?: string }) {
   if (!children) return null;
   return (
     <Card className="bg-card/70">
       <CardHeader>
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="pt-6">{children}</CardContent>
+      <CardContent className={contentClassName}>{children}</CardContent>
     </Card>
   );
 }
@@ -446,7 +446,7 @@ const WordFamilyRow = ({ label, data }: { label: string, data?: WordFamilyDetail
                 )}
 
                 {hasVerbForms && (
-                    <DetailCard title="Verb Forms">
+                    <DetailCard title="Verb Forms" contentClassName="pt-6">
                          <Table>
                             <TableHeader>
                                 <TableRow>
