@@ -536,7 +536,7 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
                 <TableCell className="font-medium">{label}</TableCell>
                 <TableCell>{verbData.word}</TableCell>
                 <TableCell>{verbData.bangla_meaning}</TableCell>
-                <TableCell className="text-right">{verbData.usage_timing}</TableCell>
+                <TableCell className="text-right hidden sm:table-cell">{verbData.usage_timing}</TableCell>
             </TableRow>
         )
     };
@@ -640,7 +640,7 @@ function FeedbackScreen({ feedback, word, onNext }: { feedback: AnswerFeedback, 
                                 <TableHead>Form</TableHead>
                                 <TableHead>Word</TableHead>
                                 <TableHead>Meaning</TableHead>
-                                <TableHead className="text-right">Timing</TableHead>
+                                <TableHead className="text-right hidden sm:table-cell">Timing</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -692,5 +692,7 @@ function FinishedState({ onRestart }: { onRestart: () => void }) {
         </div>
     )
 }
+
+    
 
     

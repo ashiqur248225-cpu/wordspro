@@ -127,7 +127,7 @@ const VerbFormRow = ({ label, data }: { label: string, data?: VerbFormDetail }) 
                 <p className="text-sm text-muted-foreground">{data.pronunciation}</p>
             </TableCell>
             <TableCell>{data.bangla_meaning}</TableCell>
-            <TableCell className="text-sm text-muted-foreground">{data.usage_timing}</TableCell>
+            <TableCell className="text-sm text-muted-foreground text-right hidden sm:table-cell">{data.usage_timing}</TableCell>
         </TableRow>
     );
 };
@@ -285,9 +285,9 @@ const WordFamilyRow = ({ label, data }: { label: string, data?: WordFamilyDetail
   return (
     <div className="p-4 md:p-6">
         <div className="max-w-4xl mx-auto">
-            <header className="flex justify-between items-start mb-6">
+            <header className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 mb-6">
                 <div>
-                    <h1 className="text-5xl font-bold">{word.word}</h1>
+                    <h1 className="text-4xl sm:text-5xl font-bold">{word.word}</h1>
                     <p className="text-xl text-muted-foreground capitalize">{word.partOfSpeech}</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -453,7 +453,7 @@ const WordFamilyRow = ({ label, data }: { label: string, data?: WordFamilyDetail
                                 <TableHead>Form</TableHead>
                                 <TableHead>Word & Pronunciation</TableHead>
                                 <TableHead>Bangla Meaning</TableHead>
-                                <TableHead>Usage</TableHead>
+                                <TableHead className="text-right hidden sm:table-cell">Usage</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -487,3 +487,5 @@ export default function WordDetailsPage() {
         </Suspense>
     )
 }
+
+    

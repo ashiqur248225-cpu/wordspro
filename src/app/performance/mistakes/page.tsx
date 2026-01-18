@@ -174,6 +174,8 @@ export default function MistakenWordsPage() {
              </div>
         )
     }
+    
+    const hiddenColumnsOnMobile = ['partOfSpeech', 'wrong_count.spelling', 'wrong_count.meaning', 'totalSynonymAntonymWrongs'];
 
     return (
          <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6 overflow-x-auto">
@@ -228,7 +230,7 @@ export default function MistakenWordsPage() {
                                 <TableRow key={headerGroup.id}>
                                     {headerGroup.headers.map((header) => {
                                     return (
-                                        <TableHead key={header.id}>
+                                        <TableHead key={header.id} className={hiddenColumnsOnMobile.includes(header.column.id) ? 'hidden md:table-cell' : ''}>
                                         {header.isPlaceholder
                                             ? null
                                             : flexRender(
@@ -251,7 +253,7 @@ export default function MistakenWordsPage() {
                                         className="cursor-pointer"
                                     >
                                     {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id} onClick={(e) => cell.column.id !== 'word' ? null : e.stopPropagation()}>
+                                        <TableCell key={cell.id} onClick={(e) => cell.column.id !== 'word' ? null : e.stopPropagation()} className={hiddenColumnsOnMobile.includes(cell.column.id) ? 'hidden md:table-cell' : ''}>
                                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </TableCell>
                                     ))}
@@ -290,3 +292,5 @@ export default function MistakenWordsPage() {
         </div>
     );
 }
+
+    

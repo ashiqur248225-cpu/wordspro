@@ -308,7 +308,7 @@ function WordsClientContent() {
     setIsFormOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
+ const handleDelete = async (id: string) => {
     try {
       await deleteWord(id);
       toast({ title: 'Word deleted successfully' });
@@ -513,7 +513,7 @@ const handleBulkImport = async () => {
             </DialogContent>
         </Dialog>
 
-        <AlertDialog open={!!wordToDelete} onOpenChange={setWordToDelete}>
+         <AlertDialog open={!!wordToDelete} onOpenChange={setWordToDelete}>
             <AlertDialogContent>
                 <AlertDialogHeader>
                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -525,11 +525,11 @@ const handleBulkImport = async () => {
                 <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
-                    onClick={() => {
-                        if (wordToDelete) {
-                            handleDelete(wordToDelete);
-                        }
-                    }}
+                  onClick={() => {
+                    if (wordToDelete) {
+                      handleDelete(wordToDelete);
+                    }
+                  }}
                 >
                     Continue
                 </AlertDialogAction>
@@ -584,72 +584,74 @@ const handleBulkImport = async () => {
             </DialogContent>
         </Dialog>
         
-        <div className="flex items-center gap-2 mb-4">
-            <div className="relative flex-1">
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+            <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
                     placeholder="Search words..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    className="pl-10 max-w-sm"
+                    className="pl-10 w-full sm:max-w-sm"
                 />
             </div>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9 gap-1">
-                        <Filter className="h-3.5 w-3.5" />
-                         {activeFilterCount > 0 && <Badge variant="secondary" className="rounded-sm px-1 font-normal">{activeFilterCount}</Badge>}
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[200px]">
-                    <DropdownMenuLabel>Filter by Level</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuRadioGroup value={difficultyFilter} onValueChange={setDifficultyFilter}>
-                        {(["All", "Today's", 'Learned', 'Easy', 'Medium', 'Hard', 'New'] as const).map(d => (
-                            <DropdownMenuRadioItem key={d} value={d}>
-                                {d}
-                            </DropdownMenuRadioItem>
-                        ))}
-                    </DropdownMenuRadioGroup>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Filter by Part of Speech</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuRadioGroup value={posFilter} onValueChange={setPosFilter}>
-                         <DropdownMenuRadioItem value="All">All</DropdownMenuRadioItem>
-                        {partOfSpeechOptions.map(pos => (
-                            <DropdownMenuRadioItem key={pos} value={pos}>
-                                {pos.charAt(0).toUpperCase() + pos.slice(1)}
-                            </DropdownMenuRadioItem>
-                        ))}
-                    </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex flex-wrap gap-2">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 gap-1">
+                            <Filter className="h-3.5 w-3.5" />
+                             {activeFilterCount > 0 && <Badge variant="secondary" className="rounded-sm px-1 font-normal">{activeFilterCount}</Badge>}
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-[200px]">
+                        <DropdownMenuLabel>Filter by Level</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuRadioGroup value={difficultyFilter} onValueChange={setDifficultyFilter}>
+                            {(["All", "Today's", 'Learned', 'Easy', 'Medium', 'Hard', 'New'] as const).map(d => (
+                                <DropdownMenuRadioItem key={d} value={d}>
+                                    {d}
+                                </DropdownMenuRadioItem>
+                            ))}
+                        </DropdownMenuRadioGroup>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel>Filter by Part of Speech</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuRadioGroup value={posFilter} onValueChange={setPosFilter}>
+                             <DropdownMenuRadioItem value="All">All</DropdownMenuRadioItem>
+                            {partOfSpeechOptions.map(pos => (
+                                <DropdownMenuRadioItem key={pos} value={pos}>
+                                    {pos.charAt(0).toUpperCase() + pos.slice(1)}
+                                </DropdownMenuRadioItem>
+                            ))}
+                        </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                </DropdownMenu>
 
-            <Button variant="outline" size="sm" className="h-9 gap-1" onClick={handleStartFlashcards}>
-                <CreditCard className="h-3.5 w-3.5" />
-                Flash Cards
-            </Button>
+                <Button variant="outline" size="sm" className="h-9 gap-1" onClick={handleStartFlashcards}>
+                    <CreditCard className="h-3.5 w-3.5" />
+                    Flash Cards
+                </Button>
 
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9 gap-1 bg-accent/20 text-accent-foreground">
-                        <BookCopy className="h-3.5 w-3.5" />
-                        Exam
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[240px]">
-                    <DropdownMenuLabel>Select Exam Type</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuGroup>
-                        {examTypes.map(exam => (
-                             <DropdownMenuItem key={exam.id} onSelect={() => handleStartExam(exam.id)} disabled={exam.disabled}>
-                                {exam.label}
-                                {exam.disabled && <span className="text-xs text-muted-foreground ml-auto">(Soon)</span>}
-                             </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuGroup>
-                </DropdownMenuContent>
-            </DropdownMenu>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 gap-1 bg-accent/20 text-accent-foreground">
+                            <BookCopy className="h-3.5 w-3.5" />
+                            Exam
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-[240px]">
+                        <DropdownMenuLabel>Select Exam Type</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuGroup>
+                            {examTypes.map(exam => (
+                                 <DropdownMenuItem key={exam.id} onSelect={() => handleStartExam(exam.id)} disabled={exam.disabled}>
+                                    {exam.label}
+                                    {exam.disabled && <span className="text-xs text-muted-foreground ml-auto">(Soon)</span>}
+                                 </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
         </div>
         
         <div className="rounded-lg border">
@@ -658,8 +660,8 @@ const handleBulkImport = async () => {
                     <TableRow>
                         <TableHead>Word</TableHead>
                         <TableHead>Meaning</TableHead>
-                        <TableHead>Part of Speech</TableHead>
-                        <TableHead>Level</TableHead>
+                        <TableHead className="hidden md:table-cell">Part of Speech</TableHead>
+                        <TableHead className="hidden md:table-cell">Level</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -670,10 +672,10 @@ const handleBulkImport = async () => {
                             onClick={() => handleRowClick(word)}
                             className="cursor-pointer"
                         >
-                            <TableCell className="font-medium">{word.word}</TableCell>
-                            <TableCell>{word.meaning}</TableCell>
-                            <TableCell>{word.partOfSpeech.charAt(0).toUpperCase() + word.partOfSpeech.slice(1)}</TableCell>
-                            <TableCell><Badge variant={word.difficulty === 'Hard' ? 'destructive' : word.difficulty === 'New' ? 'outline' : 'secondary'}>{word.difficulty}</Badge></TableCell>
+                            <TableCell className="font-medium break-words">{word.word}</TableCell>
+                            <TableCell className="break-words">{word.meaning}</TableCell>
+                            <TableCell className="hidden md:table-cell">{word.partOfSpeech.charAt(0).toUpperCase() + word.partOfSpeech.slice(1)}</TableCell>
+                            <TableCell className="hidden md:table-cell"><Badge variant={word.difficulty === 'Hard' ? 'destructive' : word.difficulty === 'New' ? 'outline' : 'secondary'}>{word.difficulty}</Badge></TableCell>
                             <TableCell className="text-right">
                                <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
@@ -691,7 +693,13 @@ const handleBulkImport = async () => {
                                             Edit
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setWordToDelete(word.id); }} className="text-destructive">
+                                        <DropdownMenuItem
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setWordToDelete(word.id);
+                                          }}
+                                          className="text-destructive"
+                                        >
                                             Delete
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
@@ -719,3 +727,5 @@ export function WordsClientPage() {
         </Suspense>
     )
 }
+
+    

@@ -308,10 +308,10 @@ export function PerformanceClient() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Word</TableHead>
-                                <TableHead>Part of Speech</TableHead>
+                                <TableHead className="hidden md:table-cell">Part of Speech</TableHead>
                                 <TableHead className="text-center">Total Wrongs</TableHead>
-                                <TableHead className="text-center">Spelling Errors</TableHead>
-                                <TableHead className="text-center">Meaning Errors</TableHead>
+                                <TableHead className="text-center hidden md:table-cell">Spelling Errors</TableHead>
+                                <TableHead className="text-center hidden md:table-cell">Meaning Errors</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -328,12 +328,12 @@ export function PerformanceClient() {
                                                {word.word}
                                             </Link>
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className="hidden md:table-cell">
                                             <Badge variant="outline">{word.partOfSpeech}</Badge>
                                         </TableCell>
                                         <TableCell className="text-center font-bold text-red-500">{totalWrongs}</TableCell>
-                                        <TableCell className="text-center">{word.wrong_count?.spelling || 0}</TableCell>
-                                        <TableCell className="text-center">{word.wrong_count?.meaning || 0}</TableCell>
+                                        <TableCell className="text-center hidden md:table-cell">{word.wrong_count?.spelling || 0}</TableCell>
+                                        <TableCell className="text-center hidden md:table-cell">{word.wrong_count?.meaning || 0}</TableCell>
                                     </TableRow>
                                 )
                             })}
@@ -351,5 +351,7 @@ export function PerformanceClient() {
         </div>
     );
 }
+
+    
 
     
