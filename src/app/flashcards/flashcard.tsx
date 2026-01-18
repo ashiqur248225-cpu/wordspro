@@ -24,48 +24,64 @@ function DetailSection({ title, children }: { title: string; children: React.Rea
   );
 }
 
-const VerbFormRow = ({ label, data }: { label: string, data?: VerbFormDetail }) => {
+// Reusable components with audio functionality
+const VerbFormRow = ({ label, data, isPlaying, onPlay }: { label: string; data?: VerbFormDetail; isPlaying: boolean; onPlay: (text: string) => void; }) => {
     if (!data || !data.word) return null;
     return (
-        <TableRow>
+        <TableRow onClick={(e) => { e.stopPropagation(); onPlay(data.word!); }} className="cursor-pointer hover:bg-muted/50">
             <TableCell className="font-medium">{label}</TableCell>
-            <TableCell>{data.word}</TableCell>
+            <TableCell className="flex items-center gap-2">
+              {data.word}
+              <Volume2 className={cn("h-4 w-4 text-muted-foreground", isPlaying && "animate-pulse text-primary")} />
+            </TableCell>
             <TableCell>{data.bangla_meaning}</TableCell>
         </TableRow>
     );
 };
 
-const WordFamilyRow = ({ label, data }: { label: string, data?: WordFamilyDetail }) => {
-    if (!data) return null;
+const WordFamilyRow = ({ label, data, isPlaying, onPlay }: { label: string; data?: WordFamilyDetail; isPlaying: boolean; onPlay: (text: string) => void; }) => {
+    if (!data || !data.word) return null;
     return (
-        <TableRow>
+        <TableRow onClick={(e) => { e.stopPropagation(); onPlay(data.word); }} className="cursor-pointer hover:bg-muted/50">
             <TableCell className="font-medium capitalize">{label}</TableCell>
-            <TableCell>{data.word}</TableCell>
+            <TableCell className="flex items-center gap-2">
+              {data.word}
+              <Volume2 className={cn("h-4 w-4 text-muted-foreground", isPlaying && "animate-pulse text-primary")} />
+            </TableCell>
             <TableCell>{data.meaning}</TableCell>
         </TableRow>
     )
 }
 
-const SynonymAntonymItem = ({ item }: { item: string | Synonym | Antonym }) => {
-    const wordText = typeof item === 'string' ? item : item.word;
+const getWordText = (item: string | Synonym | Antonym) => typeof item === 'string' ? item : item.word;
+
+const SynonymAntonymItem = ({ item, isPlaying, onPlay }: { item: string | Synonym | Antonym; isPlaying: boolean; onPlay: (text: string) => void; }) => {
+    const wordText = getWordText(item);
     const bangla = typeof item !== 'string' ? item.bangla : undefined;
 
     return (
-        <Badge variant="secondary" className="text-base px-3 py-1">
+        <Badge 
+            variant={isPlaying ? 'default' : 'secondary'} 
+            className="text-base px-3 py-1 cursor-pointer"
+            onClick={(e) => {
+                e.stopPropagation();
+                onPlay(wordText);
+            }}
+        >
             <span>{wordText}</span>
-            {bangla && <span className="text-sm text-muted-foreground ml-2">({bangla})</span>}
+            {bangla && <span className={cn("text-sm ml-2", isPlaying ? "text-primary-foreground/80" : "text-muted-foreground")}>({bangla})</span>}
+            <Volume2 className={cn("inline h-4 w-4 ml-2", isPlaying ? "animate-pulse text-primary-foreground" : "text-muted-foreground")} />
         </Badge>
     );
 };
 
 export function FlashCard({ word }: FlashCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState<string | null>(null);
 
   if (!word) return null;
   
-  const handlePlayAudio = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card from flipping
+  const handlePlayAudio = (textToSpeak: string) => {
     if (typeof window === 'undefined' || !window.speechSynthesis) {
         console.error('Speech synthesis not supported.');
         return;
@@ -73,15 +89,15 @@ export function FlashCard({ word }: FlashCardProps) {
     
     if (window.speechSynthesis.speaking) {
         window.speechSynthesis.cancel();
-        if (isPlaying) {
-          setIsPlaying(false);
+        if (isPlaying === textToSpeak) {
+          setIsPlaying(null);
           return;
         }
     }
     
-    setIsPlaying(true);
+    setIsPlaying(textToSpeak);
 
-    const utterance = new SpeechSynthesisUtterance(word.word);
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
     
     const allVoices = window.speechSynthesis.getVoices();
     let selectedVoice = allVoices.find(voice => voice.lang === 'en-US' && (voice.name.includes('Google') || voice.name.includes('Alex')));
@@ -94,12 +110,12 @@ export function FlashCard({ word }: FlashCardProps) {
     utterance.rate = 1;
     utterance.pitch = 1;
 
-    utterance.onend = () => setIsPlaying(false);
+    utterance.onend = () => setIsPlaying(null);
     utterance.onerror = (event) => {
         if (event.error !== 'interrupted') {
           console.error('Speech synthesis error:', event.error);
         }
-        setIsPlaying(false);
+        setIsPlaying(null);
     };
 
     window.speechSynthesis.speak(utterance);
@@ -107,7 +123,8 @@ export function FlashCard({ word }: FlashCardProps) {
   
   const hasVerbForms = word.verb_forms && (word.verb_forms.v1_present?.word || word.verb_forms.v2_past?.word || word.verb_forms.v3_past_participle?.word);
   const hasWordFamily = word.word_family && Object.values(word.word_family).some(v => v);
-  const hasExampleSentences = word.exampleSentences && (word.exampleSentences.by_structure?.length || word.exampleSentences.by_tense?.length);
+  const hasExampleSentences = word.exampleSentences && ((word.exampleSentences.by_structure?.length || 0) > 0 || (word.exampleSentences.by_tense?.length || 0) > 0);
+
 
   return (
     <div className={`flashcard ${isFlipped ? 'flipped' : ''}`} onClick={() => setIsFlipped(!isFlipped)}>
@@ -119,8 +136,8 @@ export function FlashCard({ word }: FlashCardProps) {
                     <CardHeader className="text-center">
                         <div className="flex items-center justify-center gap-2">
                             <CardTitle className="text-4xl font-bold">{word.word}</CardTitle>
-                             <Button variant="ghost" size="icon" onClick={handlePlayAudio}>
-                                <Volume2 className={cn("h-7 w-7 text-muted-foreground", isPlaying && "animate-pulse text-primary")} />
+                             <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handlePlayAudio(word.word); }}>
+                                <Volume2 className={cn("h-7 w-7 text-muted-foreground", isPlaying === word.word && "animate-pulse text-primary")} />
                             </Button>
                         </div>
                         <CardDescription className="text-xl capitalize">{word.partOfSpeech}</CardDescription>
@@ -140,10 +157,10 @@ export function FlashCard({ word }: FlashCardProps) {
                              <DetailSection title="Word Family">
                                 <Table>
                                     <TableBody>
-                                        <WordFamilyRow label="noun" data={word.word_family?.noun} />
-                                        <WordFamilyRow label="adjective" data={word.word_family?.adjective} />
-                                        <WordFamilyRow label="adverb" data={word.word_family?.adverb} />
-                                        <WordFamilyRow label="verb" data={word.word_family?.verb} />
+                                        <WordFamilyRow label="noun" data={word.word_family?.noun} isPlaying={isPlaying === word.word_family?.noun?.word} onPlay={handlePlayAudio} />
+                                        <WordFamilyRow label="adjective" data={word.word_family?.adjective} isPlaying={isPlaying === word.word_family?.adjective?.word} onPlay={handlePlayAudio} />
+                                        <WordFamilyRow label="adverb" data={word.word_family?.adverb} isPlaying={isPlaying === word.word_family?.adverb?.word} onPlay={handlePlayAudio} />
+                                        <WordFamilyRow label="verb" data={word.word_family?.verb} isPlaying={isPlaying === word.word_family?.verb?.word} onPlay={handlePlayAudio} />
                                     </TableBody>
                                 </Table>
                             </DetailSection>
@@ -160,9 +177,9 @@ export function FlashCard({ word }: FlashCardProps) {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        <VerbFormRow label="V1" data={word.verb_forms?.v1_present} />
-                                        <VerbFormRow label="V2" data={word.verb_forms?.v2_past} />
-                                        <VerbFormRow label="V3" data={word.verb_forms?.v3_past_participle} />
+                                        <VerbFormRow label="V1" data={word.verb_forms?.v1_present} isPlaying={isPlaying === word.verb_forms?.v1_present?.word} onPlay={handlePlayAudio} />
+                                        <VerbFormRow label="V2" data={word.verb_forms?.v2_past} isPlaying={isPlaying === word.verb_forms?.v2_past?.word} onPlay={handlePlayAudio} />
+                                        <VerbFormRow label="V3" data={word.verb_forms?.v3_past_participle} isPlaying={isPlaying === word.verb_forms?.v3_past_participle?.word} onPlay={handlePlayAudio} />
                                     </TableBody>
                                 </Table>
                             </DetailSection>
@@ -202,7 +219,7 @@ export function FlashCard({ word }: FlashCardProps) {
                         {word.synonyms && word.synonyms.length > 0 && (
                             <DetailSection title="Synonyms">
                                 <div className="flex flex-wrap gap-2">
-                                    {word.synonyms.map((item, i) => <SynonymAntonymItem key={i} item={item} />)}
+                                    {word.synonyms.map((item, i) => <SynonymAntonymItem key={i} item={item} isPlaying={isPlaying === getWordText(item)} onPlay={handlePlayAudio} />)}
                                 </div>
                             </DetailSection>
                         )}
@@ -210,7 +227,7 @@ export function FlashCard({ word }: FlashCardProps) {
                         {word.antonyms && word.antonyms.length > 0 && (
                             <DetailSection title="Antonyms">
                                 <div className="flex flex-wrap gap-2">
-                                    {word.antonyms.map((item, i) => <SynonymAntonymItem key={i} item={item} />)}
+                                    {word.antonyms.map((item, i) => <SynonymAntonymItem key={i} item={item} isPlaying={isPlaying === getWordText(item)} onPlay={handlePlayAudio} />)}
                                 </div>
                             </DetailSection>
                         )}
