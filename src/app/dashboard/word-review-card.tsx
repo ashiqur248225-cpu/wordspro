@@ -81,7 +81,7 @@ export function WordReviewCard({ difficulty }: WordReviewCardProps) {
 
   if (isLoading) {
     return (
-      <Card className="shrink-0 w-60 sm:w-auto">
+      <Card>
         <CardHeader>
           <Skeleton className="h-6 w-32" />
           <Skeleton className="h-4 w-48 mt-1" />
@@ -94,7 +94,7 @@ export function WordReviewCard({ difficulty }: WordReviewCardProps) {
   }
 
   return (
-    <Card asChild className={`${config.color} transition-all flex flex-col shrink-0 w-60 sm:w-auto`}>
+    <Card asChild className={`${config.color} transition-all flex flex-col`}>
       <Link href={`/words?difficulty=${difficulty}`}>
         <CardHeader className="flex-grow">
           <CardTitle className="flex items-center justify-between">
