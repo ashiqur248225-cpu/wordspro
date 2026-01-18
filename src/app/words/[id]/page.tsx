@@ -21,7 +21,7 @@ function DetailCard({ title, children, defaultOpen = true }: { title: string; ch
       <CardHeader>
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
-      <CardContent>{children}</CardContent>
+      <CardContent className="pt-6">{children}</CardContent>
     </Card>
   );
 }
@@ -487,5 +487,3 @@ export default function WordDetailsPage() {
         </Suspense>
     )
 }
-
-    
